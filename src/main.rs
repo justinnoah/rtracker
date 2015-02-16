@@ -15,14 +15,13 @@
 #![feature(core)]
 #![feature(net)]
 
-extern crate "rustc-serialize" as rustc_serialize;
-
+extern crate rand;
 extern crate rusqlite;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate time;
 
+use rand::Rng;
 use std::net::{SocketAddr, UdpSocket};
-use std::rand;
-use std::rand::Rng;
 use std::thread::Thread;
 
 use rusqlite::SqliteConnection;
