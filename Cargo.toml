@@ -5,5 +5,7 @@ version = "0.0.0"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
 
 [dependencies]
-rusqlite    = "0.0.9"
-time        = "0.1.17"
+bincode         = "0.0.8"
+rusqlite        = "0.0.9"
+rustc-serialize = "0.2.12"
+time            = "0.1.17"
