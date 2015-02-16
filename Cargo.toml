@@ -3,3 +3,7 @@
 name = "rtracker"
 version = "0.0.0"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
+
+[dependencies]
+rusqlite    = "0.0.9"
+time        = "0.1.17"
