@@ -6,6 +6,7 @@ authors = ["Justin Noah <justinnoah@gmail.com>"]
 
 [dependencies]
 bincode         = "0.0.8"
+rand            = "0.1.2"
 rusqlite        = "0.0.9"
-rustc-serialize = "0.2.12"
+rustc-serialize = "0.2.13"
 time            = "0.1.17"
