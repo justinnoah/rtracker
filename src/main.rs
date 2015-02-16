@@ -27,7 +27,7 @@ use std::thread::Thread;
 
 use rusqlite::SqliteConnection;
 
-use parse_packets::{PacketHeader, parse_header};
+use parse_packets::{parse_header, encode_connect_response};
 
 mod parse_packets;
 
@@ -60,24 +60,27 @@ fn init_db(path: &'static str) -> SqliteConnection {
     conn
 }
 
-fn create_connection(conn: &SqliteConnection) {
+fn add_new_connection(conn: &SqliteConnection) -> u64 {
     // Cool Story, we got a new connection.
     // We need to generate an unique id for this client.
     // 32bits of the current time in nanoseconds combined with 32bits of
     // random numbers
     let uuid = gen_uuid() as i64;
     conn.execute(
-        "INSERT OR REPLACE INTO users (uuid, last_active) VALUES ($1, strftime('%s', 'now'))",
+        "INSERT INTO users (uuid, last_active) VALUES ($1, strftime('%s', 'now'))",
         &[&uuid]
     ).unwrap();
+    uuid as u64
 }
 
-fn handle_packet(src: &SocketAddr, amt: usize, packet: [u8; 2048], conn: &SqliteConnection) {
-    let header = parse_header(&packet[0..15]);
+fn handle_packet(tsock: UdpSocket, src: &SocketAddr, amt: usize, packet: [u8; 2048], conn: &SqliteConnection) {
+    let header = parse_header(&packet[0..16]);
 
-    if header.connection_id == 17568305177 {
-        create_connection(conn);
-        return
+    if header.connection_id == 0x41727101980 {
+        let uuid = add_new_connection(conn);
+        // Now they're in the db, let's say hi
+        let encoded = encode_connect_response(uuid, header.transaction_id);
+        tsock.send_to(&encoded, src).unwrap();
     }
 }
 
@@ -85,16 +88,17 @@ fn main() {
     let database_path = "file::memory:?cache=shared";
 
     // Let's first initialize the database.
-    let mut sock = UdpSocket::bind("127.0.0.1:6969").unwrap();
     let _ = init_db(database_path);
+    let sock = UdpSocket::bind("127.0.0.1:6969").unwrap();
 
     loop {
         let mut buf = [0; 2048];
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
+        let tsock = sock.try_clone().unwrap();
         Thread::spawn(move|| {
             let conn = SqliteConnection::open(database_path).unwrap();
-            handle_packet(&src, amt, buf, &conn);
-            conn.close();
+            handle_packet(tsock, &src, amt, buf, &conn);
+            let _ = conn.close();
         });
     }
 }
