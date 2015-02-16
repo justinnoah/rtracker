@@ -23,45 +23,15 @@ use std::thread::Thread;
 
 use rusqlite::SqliteConnection;
 
-#[repr(C)]
-struct PacketHeader {
-    connection_id:  u64,
-    action:         u32,
-    transaction_id: u32,
-}
+use parse_packets::{PacketHeader, parse_header};
+
+mod parse_packets;
 
 fn gen_uuid() -> u64 {
     let mut rng = rand::thread_rng();
     let mut uuid = time::precise_time_ns();
     uuid <<= 32;
     uuid | (rng.gen::<u32>() as u64)
-}
-
-fn parse_header(packet: &[u8]) -> PacketHeader {
-    let p_con_id            = &packet[0..7];
-    let p_action            = &packet[8..11];
-    let p_tran_id           = &packet[12..15];
-
-    let mut connection_id:  u64 = 0;
-    let mut action:         u32 = 0;
-    let mut transaction_id: u32 = 0;
-
-    for i in p_con_id.iter() {
-        connection_id <<= 8;
-        connection_id |= (*i as u64);
-    }
-
-    for i in p_action.iter() {
-        action <<= 8;
-        action |= (*i as u32);
-    }
-
-    for i in p_tran_id.iter() {
-        transaction_id <<= 8;
-        transaction_id |= (*i as u32);
-    }
-
-    PacketHeader {connection_id: connection_id, action: action, transaction_id: transaction_id}
 }
 
 fn init_db(path: &'static str) -> SqliteConnection {
