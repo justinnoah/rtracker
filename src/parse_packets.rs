@@ -41,17 +41,17 @@ pub fn parse_header(packet: &[u8]) -> PacketHeader {
 
     for i in p_con_id.iter() {
         connection_id <<= 8;
-        connection_id |= (*i as u64);
+        connection_id |= *i as u64;
     }
 
     for i in p_action.iter() {
         action <<= 8;
-        action |= (*i as u32);
+        action |= *i as u32;
     }
 
     for i in p_tran_id.iter() {
         transaction_id <<= 8;
-        transaction_id |= (*i as u32);
+        transaction_id |= *i as u32;
     }
 
     PacketHeader {connection_id: connection_id, action: action, transaction_id: transaction_id}

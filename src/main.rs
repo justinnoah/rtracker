@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![feature(core)]
+#![feature(net)]
+
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate rusqlite;
@@ -20,7 +23,6 @@ extern crate time;
 use std::net::{SocketAddr, UdpSocket};
 use std::rand;
 use std::rand::Rng;
-use std::sync::Arc;
 use std::thread::Thread;
 
 use rusqlite::SqliteConnection;
@@ -80,20 +82,19 @@ fn handle_packet(src: &SocketAddr, amt: usize, packet: [u8; 2048], conn: &Sqlite
 }
 
 fn main() {
-    let DATABASE_PATH = "file::memory:?cache=shared";
+    let database_path = "file::memory:?cache=shared";
 
     // Let's first initialize the database.
-    let conn = init_db(DATABASE_PATH);
     let mut sock = UdpSocket::bind("127.0.0.1:6969").unwrap();
+    let _ = init_db(database_path);
 
     loop {
         let mut buf = [0; 2048];
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
         Thread::spawn(move|| {
-            let conn = SqliteConnection::open(DATABASE_PATH).unwrap();
+            let conn = SqliteConnection::open(database_path).unwrap();
             handle_packet(&src, amt, buf, &conn);
             conn.close();
         });
     }
-    conn.close();
 }
