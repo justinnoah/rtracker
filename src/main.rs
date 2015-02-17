@@ -26,7 +26,7 @@ use std::thread::Thread;
 
 use rusqlite::SqliteConnection;
 
-use parse_packets::{parse_header, encode_connect_response};
+use parse_packets::{parse_header, encode_connect_response, decode_client_announce};
 
 mod parse_packets;
 
@@ -91,6 +91,9 @@ fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &Sql
             } else {
                 ()
             }
+        },
+        1 => {
+            let decoded = decode_client_announce(&packet_body);
         },
         _ => {
             ()
