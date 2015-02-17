@@ -34,17 +34,17 @@ struct ConnectionResponse {
 }
 
 #[derive(Debug)]
-struct ClientAnnounce {
-    info_hash:  [u8; 20],
-    peer_id:    [u8; 20],
-    downloaded: i64,
-    remaining:  i64,
-    uploaded:   i64,
-    event:      i32,
-    ip:         u32,
-    key:        u32,
-    num_want:   i32,
-    port:       u16,
+pub struct ClientAnnounce {
+    pub info_hash:  [u8; 20],
+    pub peer_id:    [u8; 20],
+    pub downloaded: i64,
+    pub remaining:  i64,
+    pub uploaded:   i64,
+    pub event:      i32,
+    pub ip:         u32,
+    pub key:        u32,
+    pub num_want:   i32,
+    pub port:       u16,
 }
 
 impl Decodable for ClientAnnounce {
@@ -93,4 +93,16 @@ pub fn encode_connect_response(uuid: i64, tran_id: i32) -> Vec<u8> {
 
 pub fn decode_client_announce(packet: &[u8]) -> ClientAnnounce {
     bincode::decode(&packet).unwrap()
+}
+
+pub fn encode_server_announce(transaction_id: i32, leechers: i32, seeders: i32) -> Vec<u8> {
+    let packet = ServerAnnounce {
+        action:         1,              // Announce is always 1
+        transaction_id: transaction_id,
+        interval:       1800,           // 30min = 1800sec
+        leechers:       leechers,
+        seeders:        seeders,
+    };
+
+    bincode::encode(&packet, SizeLimit::Infinite).unwrap()
 }
