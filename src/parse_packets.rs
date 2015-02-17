@@ -21,16 +21,16 @@ use rustc_serialize::{Decodable, Decoder};
 
 #[derive(RustcDecodable)]
 pub struct PacketHeader {
-    pub connection_id:  u64,
-    pub action:         u32,
-    pub transaction_id: u32,
+    pub connection_id:  i64,
+    pub action:         i32,
+    pub transaction_id: i32,
 }
 
 #[derive(Debug, RustcEncodable)]
 struct ConnectionResponse {
-    action:         u32,
-    transaction_id: u32,
-    connection_id:  u64,
+    action:         i32,
+    transaction_id: i32,
+    connection_id:  i64,
 }
 
 #[derive(Debug)]
@@ -38,7 +38,7 @@ struct ClientAnnounce {
     info_hash:  [u8; 20],
     peer_id:    [u8; 20],
     downloaded: i64,
-    left:       i64,
+    remaining:  i64,
     uploaded:   i64,
     event:      i32,
     ip:         u32,
@@ -61,7 +61,7 @@ impl Decodable for ClientAnnounce {
             info_hash:  info_hash,
             peer_id:    peer_id,
             downloaded: try!(d.read_i64()),
-            left:       try!(d.read_i64()),
+            remaining:  try!(d.read_i64()),
             uploaded:   try!(d.read_i64()),
             event:      try!(d.read_i32()),
             ip:         try!(d.read_u32()),
@@ -72,13 +72,21 @@ impl Decodable for ClientAnnounce {
     }
 }
 
+#[derive(Debug, RustcEncodable)]
+struct ServerAnnounce {
+    action:         i32,
+    transaction_id: i32,
+    interval:       i32,
+    leechers:       i32,
+    seeders:        i32,
+}
 
 pub fn parse_header(packet: &[u8]) -> PacketHeader {
     // In case we send extra by mistake, make sure to only parse the first 16 bytes
     bincode::decode(&packet[..16]).unwrap()
 }
 
-pub fn encode_connect_response(uuid: u64, tran_id: u32) -> Vec<u8> {
+pub fn encode_connect_response(uuid: i64, tran_id: i32) -> Vec<u8> {
     let packet = ConnectionResponse { action: 0, transaction_id: tran_id, connection_id: uuid};
     bincode::encode(&packet, SizeLimit::Infinite).unwrap()
 }

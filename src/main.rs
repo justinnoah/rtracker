@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(collections)]
 #![feature(core)]
+#![feature(collections)]
 #![feature(net)]
 #![feature(std_misc)]
 
@@ -32,17 +32,17 @@ use parse_packets::{parse_header, encode_connect_response, decode_client_announc
 
 mod parse_packets;
 
-fn gen_uuid() -> u64 {
+fn gen_uuid() -> i64 {
     let mut rng = rand::thread_rng();
     let mut uuid = time::precise_time_ns();
     uuid <<= 32;
-    uuid | (rng.gen::<u32>() as u64)
+    uuid as i64 | rng.gen::<u32>() as i64
 }
 
 fn init_db(path: &'static str) -> SqliteConnection {
     let conn = SqliteConnection::open(path).unwrap();
-    conn.execute_batch(
-        "BEGIN;
+    conn.execute_batch("
+        BEGIN;
         CREATE TABLE IF NOT EXISTS users (
             uuid          INTEGER PRIMARY KEY,
             last_active   INTEGER
@@ -61,17 +61,13 @@ fn init_db(path: &'static str) -> SqliteConnection {
     conn
 }
 
-fn add_new_connection(conn: &SqliteConnection) -> u64 {
-    // Cool Story, we got a new connection.
-    // We need to generate an unique id for this client.
-    // 32bits of the current time in nanoseconds combined with 32bits of
-    // random numbers
-    let uuid = gen_uuid() as i64;
+fn update_connection(conn: &SqliteConnection, uuid: i64) {
+    // Update the last seen time
     conn.execute(
-        "INSERT INTO users (uuid, last_active) VALUES ($1, strftime('%s', 'now'))",
+        "INSERT OR REPLACE INTO users (uuid, last_active) VALUES ($1, strftime('%s', 'now'))",
         &[&uuid]
     ).unwrap();
-    uuid as u64
+
 }
 
 fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &SqliteConnection) {
@@ -86,7 +82,12 @@ fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &Sql
     match header.action {
         0 => {
             if header.connection_id == 0x41727101980 {
-                let uuid = add_new_connection(conn);
+                // Cool Story, we got a new connection.
+                // We need to generate an unique id for this client.
+                // 32bits of the current time in nanoseconds combined with 32bits of
+                // random numbers
+                let uuid = gen_uuid();
+                update_connection(conn, uuid);
                 // Now they're in the db, let's say hi
                 let encoded = encode_connect_response(uuid, header.transaction_id);
                 tsock.send_to(&encoded, src).unwrap();
