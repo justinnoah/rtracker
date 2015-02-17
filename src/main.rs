@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![feature(collections)]
 #![feature(core)]
 #![feature(net)]
+#![feature(std_misc)]
 
 extern crate rand;
 extern crate rusqlite;
@@ -106,7 +108,7 @@ fn main() {
 
     // Let's first initialize the database.
     let _ = init_db(database_path);
-    let sock = UdpSocket::bind("127.0.0.1:6969").unwrap();
+    let sock = UdpSocket::bind("0.0.0.0:6969").unwrap();
 
     loop {
         let mut buf = [0u8; 2048];
