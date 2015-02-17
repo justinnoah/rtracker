@@ -72,14 +72,29 @@ fn add_new_connection(conn: &SqliteConnection) -> u64 {
     uuid as u64
 }
 
-fn handle_packet(tsock: UdpSocket, src: &SocketAddr, amt: usize, packet: [u8; 2048], conn: &SqliteConnection) {
-    let header = parse_header(&packet[0..16]);
+fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &SqliteConnection) {
+    // Split the packet into header and body parts
+    let mut packet_header = packet;
+    let packet_body = packet_header.split_off(16);
 
-    if header.connection_id == 0x41727101980 {
-        let uuid = add_new_connection(conn);
-        // Now they're in the db, let's say hi
-        let encoded = encode_connect_response(uuid, header.transaction_id);
-        tsock.send_to(&encoded, src).unwrap();
+    // parse the header to act on it
+    let header = parse_header(&packet_header);
+
+    println!("Connection ID: 0x{:x}", header.connection_id);
+    match header.action {
+        0 => {
+            if header.connection_id == 0x41727101980 {
+                let uuid = add_new_connection(conn);
+                // Now they're in the db, let's say hi
+                let encoded = encode_connect_response(uuid, header.transaction_id);
+                tsock.send_to(&encoded, src).unwrap();
+            } else {
+                ()
+            }
+        },
+        _ => {
+            ()
+        },
     }
 }
 
@@ -98,7 +113,7 @@ fn main() {
         b.truncate(amt);
         Thread::spawn(move|| {
             let conn = SqliteConnection::open(database_path).unwrap();
-            handle_packet(tsock, &src, amt, buf, &conn);
+            handle_packet(tsock, &src, b, &conn);
             let _ = conn.close();
         });
     }
