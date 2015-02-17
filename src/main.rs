@@ -91,9 +91,11 @@ fn main() {
     let sock = UdpSocket::bind("127.0.0.1:6969").unwrap();
 
     loop {
-        let mut buf = [0; 2048];
+        let mut buf = [0u8; 2048];
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
         let tsock = sock.try_clone().unwrap();
+        let mut b: Vec<u8> = buf.to_vec();
+        b.truncate(amt);
         Thread::spawn(move|| {
             let conn = SqliteConnection::open(database_path).unwrap();
             handle_packet(tsock, &src, amt, buf, &conn);
