@@ -25,6 +25,7 @@ use rusqlite::SqliteConnection;
 
 use parse_packets::*;
 
+// struct used by update announce to make passing data easy (vs. 4 more parameters)
 struct ID {
     info_hash:  [u8; 20],
     ip:         u32,
@@ -33,6 +34,7 @@ struct ID {
     remaining:  i64,
 }
 
+// Generate a UUID to make the client happy
 fn gen_uuid() -> i64 {
     let mut rng = rand::thread_rng();
     let mut uuid = time::precise_time_ns();
@@ -40,14 +42,21 @@ fn gen_uuid() -> i64 {
     uuid as i64 | rng.gen::<u32>() as i64
 }
 
+// On announce, update the client's remaining and last_active info
+// Get the Seeders and Leechers for the provided info_hash
 fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (Vec<(i32,i32)>,i32, i32) {
-    // Update the last seen time
+
+    // Update the user info
     conn.execute(
         "INSERT OR REPLACE INTO torrent (info_hash, ip, port, peer_id, remaining, last_active)
         VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))",
         &[&id.info_hash.as_slice(), &(id.ip as i32), &(id.port as i32),
           &id.peer_id.as_slice(), &id.remaining]
     ).unwrap();
+
+    // Info Hash swarm IP and ports
+    // i32 due to current rusqlite type handling
+    let mut swarm: Vec<(i32, i32)> = Vec::new();
 
     // Get Seeders
     let mut stmt = conn.prepare(
@@ -57,8 +66,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
          GROUP BY ip,port"
     ).unwrap();
 
-    let mut swarm: Vec<(i32, i32)> = Vec::new();
-
+    // Each row produces a count, update it as we continue along
     let mut seeders: i32 = 0;
     for row in stmt.query(&[&data.info_hash.as_slice()]).unwrap().map(|row| row.unwrap()) {
         let i: i32 = row.get(0);
@@ -78,6 +86,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
          GROUP BY ip,port"
     ).unwrap();
 
+    // Each row produces a count, update it as we continue along
     let mut leechers: i32 = 0;
     for row in stmt.query(&[&data.info_hash.as_slice()]).unwrap().map(|row| row.unwrap()) {
         let i: i32 = row.get(0);
@@ -89,6 +98,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
         }
     }
 
+    // Return the swarm, seeders, and leechers for packeting
     (swarm, seeders, leechers)
 }
 
@@ -117,7 +127,10 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
             }
         },
         1 => {
+            // Decode the announce info
             let decoded = decode_client_announce(&packet_body);
+
+            // handle an IP of 0
             let mut ip = decoded.ip;
             if ip == 0 {
                 ip = match src.ip() {
@@ -127,6 +140,8 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
                     _ => panic!("This is possible?")
                 };
             }
+
+            // Package up the announce info for DB consumption
             let id = ID {
                 info_hash: decoded.info_hash,
                 ip: ip,
@@ -134,10 +149,14 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
                 peer_id: decoded.peer_id,
                 remaining: decoded.remaining,
             };
+
+            // Get the swarm, seeder, and leecher info
             let (swarm, seeders, leechers) = update_announce(conn, &id, &decoded);
-            println!("seeders: {}, leechers: {}", seeders, leechers);
-            let serv_announce = encode_server_announce(header.transaction_id, swarm, leechers, seeders);
-            println!("sending: {:?}", serv_announce);
+
+            // Send it back to the client
+            let serv_announce = encode_server_announce(
+                header.transaction_id, swarm, leechers, seeders
+            );
             tsock.send_to(&serv_announce, src).unwrap();
         },
         _ => {
@@ -145,5 +164,3 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
         },
     }
 }
-
-

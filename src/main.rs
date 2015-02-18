@@ -30,7 +30,7 @@ use handler::handle_response;
 mod handler;
 mod parse_packets;
 
-
+// Initialize the database
 fn init_db(path: &'static str) -> SqliteConnection {
     let conn = SqliteConnection::open(path).unwrap();
     conn.execute("
@@ -45,6 +45,8 @@ fn init_db(path: &'static str) -> SqliteConnection {
         );",
         &[]
     ).unwrap();
+
+    // And return the connection
     conn
 }
 
