@@ -80,7 +80,11 @@ fn main() {
 
     // Let's first initialize the database.
     let _ = init_db(database_path);
-    let sock = UdpSocket::bind(&ip_string.as_slice()).unwrap();
+    let sock = match UdpSocket::bind(&ip_string.as_slice()) {
+        Ok(s) => s,
+        Err(e) => panic!("{}", e),
+    };
+
     println!("Listening on: {}", &ip_string);
 
     loop {
