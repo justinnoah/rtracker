@@ -160,7 +160,8 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
             tsock.send_to(&serv_announce, src).unwrap();
         },
         _ => {
-            println!("Unhandled action: {:?}", header.action);
+            let err_packet = encode_error(header.transaction_id, "Unsupported Action");
+            tsock.send_to(&err_packet, src).unwrap();
         },
     }
 }

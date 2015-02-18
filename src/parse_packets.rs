@@ -114,3 +114,19 @@ pub fn encode_server_announce(transaction_id: i32, mut swarm: Vec<(i32,i32)>, le
 
     packet
 }
+
+
+pub fn encode_error(transaction_id: i32, error_string: &'static str) -> Vec<u8> {
+    let mut packet: Vec<u8> = Vec::new();
+
+    // Action (3 == Error)
+    packet.append(&mut bincode::encode(&3i32, SizeLimit::Infinite).unwrap());
+    // Transaction_id
+    packet.append(&mut bincode::encode(&transaction_id, SizeLimit::Infinite).unwrap());
+    // Finally, the message
+    packet.append(&mut bincode::encode(&error_string, SizeLimit::Infinite).unwrap());
+
+    // Return the packet
+    packet
+}
+
