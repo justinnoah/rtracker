@@ -17,20 +17,29 @@
 #![feature(net)]
 #![feature(std_misc)]
 
+extern crate bincode;
 extern crate rand;
 extern crate rusqlite;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate time;
 
 use rand::Rng;
-use std::net::{SocketAddr, UdpSocket};
+use std::net::{IpAddr, SocketAddr, UdpSocket};
 use std::thread::Thread;
 
 use rusqlite::SqliteConnection;
 
-use parse_packets::{parse_header, encode_connect_response, decode_client_announce};
+use parse_packets::*;
 
 mod parse_packets;
+
+struct ID {
+    info_hash:  [u8; 20],
+    ip:         u32,
+    port:       u16,
+    peer_id:    [u8; 20],
+    remaining:  i64,
+}
 
 fn gen_uuid() -> i64 {
     let mut rng = rand::thread_rng();
@@ -41,33 +50,71 @@ fn gen_uuid() -> i64 {
 
 fn init_db(path: &'static str) -> SqliteConnection {
     let conn = SqliteConnection::open(path).unwrap();
-    conn.execute_batch("
-        BEGIN;
-        CREATE TABLE IF NOT EXISTS users (
-            uuid          INTEGER PRIMARY KEY,
-            last_active   INTEGER
-        );
+    conn.execute("
         CREATE TABLE IF NOT EXISTS torrent (
             info_hash   TEXT,
-            uuid        INTEGER,
-            downloaded  INTEGER,
-            uploaded    INTEGER,
+            ip          INTEGER,
+            port        INTEGER,
+            peer_id     TEXT,
             remaining   INTEGER,
-            PRIMARY KEY (info_hash, uuid)
-            FOREIGN KEY(uuid) REFERENCES users(uuid)
-        );
-        COMMIT;"
+            last_active INTEGER,
+            PRIMARY KEY (info_hash, ip, port, peer_id)
+        );",
+        &[]
     ).unwrap();
     conn
 }
 
-fn update_connection(conn: &SqliteConnection, uuid: i64) {
+fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (Vec<(i32,i32)>,i32, i32) {
     // Update the last seen time
     conn.execute(
-        "INSERT OR REPLACE INTO users (uuid, last_active) VALUES ($1, strftime('%s', 'now'))",
-        &[&uuid]
+        "INSERT OR REPLACE INTO torrent (info_hash, ip, port, peer_id, remaining, last_active)
+        VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))",
+        &[&id.info_hash.as_slice(), &(id.ip as i32), &(id.port as i32),
+          &id.peer_id.as_slice(), &id.remaining]
     ).unwrap();
 
+    // Get Seeders
+    let mut stmt = conn.prepare(
+        "SELECT ip,port,COUNT(*)
+         FROM torrent
+         WHERE info_hash = ? AND remaining = 0
+         GROUP BY ip,port"
+    ).unwrap();
+
+    let mut swarm: Vec<(i32, i32)> = Vec::new();
+
+    let mut seeders: i32 = 0;
+    for row in stmt.query(&[&data.info_hash.as_slice()]).unwrap().map(|row| row.unwrap()) {
+        let i: i32 = row.get(0);
+        let p: i32 = row.get(1);
+        swarm.push((i,p));
+        let c: i32 = row.get(2);
+        if c > seeders {
+            seeders = c;
+        }
+    }
+
+    // Get Leechers
+    let mut stmt = conn.prepare(
+        "SELECT ip,port,COUNT(*)
+         FROM torrent
+         WHERE info_hash = ? AND remaining > 0
+         GROUP BY ip,port"
+    ).unwrap();
+
+    let mut leechers: i32 = 0;
+    for row in stmt.query(&[&data.info_hash.as_slice()]).unwrap().map(|row| row.unwrap()) {
+        let i: i32 = row.get(0);
+        let p: i32 = row.get(1);
+        swarm.push((i,p));
+        let c: i32 = row.get(2);
+        if c > leechers {
+            leechers = c;
+        }
+    }
+
+    (swarm, seeders, leechers)
 }
 
 fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &SqliteConnection) {
@@ -78,7 +125,6 @@ fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &Sql
     // parse the header to act on it
     let header = parse_header(&packet_header);
 
-    println!("Connection ID: 0x{:x}", header.connection_id);
     match header.action {
         0 => {
             if header.connection_id == 0x41727101980 {
@@ -87,7 +133,7 @@ fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &Sql
                 // 32bits of the current time in nanoseconds combined with 32bits of
                 // random numbers
                 let uuid = gen_uuid();
-                update_connection(conn, uuid);
+
                 // Now they're in the db, let's say hi
                 let encoded = encode_connect_response(uuid, header.transaction_id);
                 tsock.send_to(&encoded, src).unwrap();
@@ -97,9 +143,28 @@ fn handle_packet(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &Sql
         },
         1 => {
             let decoded = decode_client_announce(&packet_body);
+            let mut ip = decoded.ip;
+            if ip == 0 {
+                ip = match src.ip() {
+                    IpAddr::V4(x) => {
+                        bincode::decode(&x.octets()).unwrap()
+                    },
+                    _ => panic!("This is possible?")
+                };
+            }
+            let id = ID {
+                info_hash: decoded.info_hash,
+                ip: ip,
+                port: decoded.port,
+                peer_id: decoded.peer_id,
+                remaining: decoded.remaining,
+            };
+            let (swarm, seeders, leechers) = update_announce(conn, &id, &decoded);
+            let serv_announce = encode_server_announce(header.transaction_id, swarm, leechers, seeders);
+            tsock.send_to(&serv_announce, src).unwrap();
         },
         _ => {
-            ()
+            println!("Unhandled action: {:?}", header.action);
         },
     }
 }

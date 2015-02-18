@@ -95,7 +95,7 @@ pub fn decode_client_announce(packet: &[u8]) -> ClientAnnounce {
     bincode::decode(&packet).unwrap()
 }
 
-pub fn encode_server_announce(transaction_id: i32, leechers: i32, seeders: i32) -> Vec<u8> {
+pub fn encode_server_announce(transaction_id: i32, mut swarm: Vec<(i32,i32)>, leechers: i32, seeders: i32) -> Vec<u8> {
     let packet = ServerAnnounce {
         action:         1,              // Announce is always 1
         transaction_id: transaction_id,
@@ -104,5 +104,13 @@ pub fn encode_server_announce(transaction_id: i32, leechers: i32, seeders: i32) 
         seeders:        seeders,
     };
 
-    bincode::encode(&packet, SizeLimit::Infinite).unwrap()
+    let mut packet = bincode::encode(&packet, SizeLimit::Infinite).unwrap();
+
+    for peer in &mut swarm {
+        let (i, p): (i32, i32) = *peer;
+        packet.append(&mut bincode::encode(&i, SizeLimit::Infinite).unwrap());
+        packet.append(&mut bincode::encode(&(p as u16), SizeLimit::Infinite).unwrap());
+    }
+
+    packet
 }
