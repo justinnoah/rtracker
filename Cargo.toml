@@ -6,7 +6,12 @@ authors = ["Justin Noah <justinnoah@gmail.com>"]
 
 [dependencies]
 bincode         = "0.0.8"
+docopt          = "0.6.37"
 rand            = "0.1.2"
 rusqlite        = "0.0.9"
 rustc-serialize = "0.2.13"
 time            = "0.1.17"
+
+[[bin]]
+name = "rtracker"
+path = "src/main.rs"

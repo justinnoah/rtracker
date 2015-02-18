@@ -3,6 +3,7 @@ name = "rtracker"
 version = "0.0.0"
 dependencies = [
  "bincode 0.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt 0.6.37 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusqlite 0.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -21,6 +22,15 @@ dependencies = [
 name = "bitflags"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "docopt"
+version = "0.6.37"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "regex 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "gcc"
@@ -45,6 +55,11 @@ dependencies = [
  "libc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "regex"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "rusqlite"

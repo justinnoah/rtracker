@@ -17,12 +17,14 @@
 #![feature(net)]
 #![feature(std_misc)]
 
+extern crate docopt;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate rusqlite;
 
 use std::net::UdpSocket;
 use std::thread::Thread;
 
+use docopt::Docopt;
 use rusqlite::SqliteConnection;
 
 use handler::handle_response;
@@ -50,12 +52,36 @@ fn init_db(path: &'static str) -> SqliteConnection {
     conn
 }
 
+static USAGE: &'static str = "
+Usage: rtracker [-i <ip>] [-p <port>]
+       rtracker (--help)
+
+Options:
+    -h, --help          Show this message
+    -i, --ip=<ip>       IP (v4) address to listen on [default: 127.0.0.1]
+    -p, --port=<port>   Port number to listen on [default: 6969]
+
+";
+
+#[derive(RustcDecodable)]
+struct Args {
+    flag_ip:    String,
+    flag_port:  u16,
+}
+
 fn main() {
+    // parse commandline args
+    let args: Args = Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|e| e.exit());
+    let ip_string = format!("{}:{}", args.flag_ip, args.flag_port);
+
     let database_path = "file::memory:?cache=shared";
 
     // Let's first initialize the database.
     let _ = init_db(database_path);
-    let sock = UdpSocket::bind("0.0.0.0:6969").unwrap();
+    let sock = UdpSocket::bind(&ip_string.as_slice()).unwrap();
+    println!("Listening on: {}", &ip_string);
 
     loop {
         let mut buf = [0u8; 2048];
