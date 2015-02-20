@@ -155,7 +155,7 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
 
             // Send it back to the client
             let serv_announce = encode_server_announce(
-                header.transaction_id, swarm, leechers, seeders
+                header.transaction_id, swarm, decoded.num_want, leechers, seeders
             );
             tsock.send_to(&serv_announce, src).unwrap();
         },
