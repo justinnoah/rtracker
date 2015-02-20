@@ -14,6 +14,7 @@
 
 #![feature(core)]
 #![feature(collections)]
+#![feature(io)]
 #![feature(net)]
 #![feature(std_misc)]
 
@@ -22,6 +23,8 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate rusqlite;
 
 use std::net::UdpSocket;
+use std::old_io::timer::sleep;
+use std::time::Duration;
 use std::thread::Thread;
 
 use docopt::Docopt;
@@ -86,6 +89,22 @@ fn main() {
     };
 
     println!("Listening on: {}", &ip_string);
+
+    // Spawn the database pruning thread
+    Thread::spawn(move|| {
+        let prune_delay = Duration::minutes(31);
+        loop {
+            // Every 31min
+            sleep(prune_delay);
+
+            // Prune the database
+            SqliteConnection::open(database_path).unwrap().execute(
+                "DELETE FROM torrent
+                WHERE (strftime('%s','now') - last_active) > 1860;",
+                &[]
+            ).unwrap();
+        }
+    });
 
     loop {
         let mut buf = [0u8; 2048];
