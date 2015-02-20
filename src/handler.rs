@@ -122,8 +122,6 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
                 // Now they're in the db, let's say hi
                 let encoded = encode_connect_response(uuid, header.transaction_id);
                 tsock.send_to(&encoded, src).unwrap();
-            } else {
-                ()
             }
         },
         1 => {
