@@ -24,6 +24,7 @@ extern crate rusqlite;
 
 use std::net::UdpSocket;
 use std::old_io::timer::sleep;
+use std::path::Path;
 use std::time::Duration;
 use std::thread::Thread;
 
@@ -36,7 +37,7 @@ mod handler;
 mod parse_packets;
 
 // Initialize the database
-fn init_db(path: &'static str) -> SqliteConnection {
+fn init_db(path: &Path) -> SqliteConnection {
     let conn = SqliteConnection::open(path).unwrap();
     conn.execute("
         CREATE TABLE IF NOT EXISTS torrent (
@@ -79,7 +80,7 @@ fn main() {
                             .unwrap_or_else(|e| e.exit());
     let ip_string = format!("{}:{}", args.flag_ip, args.flag_port);
 
-    let database_path = "file::memory:?cache=shared";
+    let database_path = Path::new("file::memory:?cache=shared");
 
     // Let's first initialize the database.
     let _ = init_db(database_path);
