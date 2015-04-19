@@ -15,7 +15,7 @@
 extern crate bincode;
 extern crate rand;
 extern crate rusqlite;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 extern crate time;
 
 use std::net::{IpAddr, SocketAddr, UdpSocket};

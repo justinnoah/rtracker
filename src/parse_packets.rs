@@ -13,7 +13,7 @@
 // limitations under the License.
 
 extern crate bincode;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 use self::bincode::SizeLimit;
 use rustc_serialize::{Decodable, Decoder};
