@@ -35,8 +35,8 @@ struct ConnectionResponse {
 
 #[derive(Debug)]
 pub struct ClientAnnounce {
-    pub info_hash:  [u8; 20],
-    pub peer_id:    [u8; 20],
+    pub info_hash:  Vec<u8>,
+    pub peer_id:    Vec<u8>,
     pub downloaded: i64,
     pub remaining:  i64,
     pub uploaded:   i64,
@@ -49,13 +49,13 @@ pub struct ClientAnnounce {
 
 impl Decodable for ClientAnnounce {
     fn decode<D: Decoder>(d: &mut D) -> Result<ClientAnnounce, D::Error> {
-        let mut info_hash = [0u8; 20];
+        let mut info_hash = Vec::new();
         for i in 0..20 {
-            info_hash[i] = try!(d.read_u8());
+            info_hash.push(try!(d.read_u8()));
         }
-        let mut peer_id = [0u8; 20];
+        let mut peer_id = Vec::new();
         for i in 0..20 {
-            peer_id[i] = try!(d.read_u8());
+            peer_id.push(try!(d.read_u8()));
         }
         Ok(ClientAnnounce {
             info_hash:  info_hash,

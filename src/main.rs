@@ -12,21 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(core)]
 #![feature(collections)]
-#![feature(io)]
-#![feature(net)]
-#![feature(std_misc)]
+#![feature(ip_addr)]
 
 extern crate docopt;
 extern crate rustc_serialize;
 extern crate rusqlite;
 
 use std::net::UdpSocket;
-use std::old_io::timer::sleep;
 use std::path::Path;
-use std::time::Duration;
-use std::thread::Thread;
+use std::thread;
+use std::thread::sleep_ms;
 
 use docopt::Docopt;
 use rusqlite::SqliteConnection;
@@ -84,7 +80,7 @@ fn main() {
 
     // Let's first initialize the database.
     let _ = init_db(database_path);
-    let sock = match UdpSocket::bind(&ip_string.as_slice()) {
+    let sock = match UdpSocket::bind(&ip_string[..]) {
         Ok(s) => s,
         Err(e) => panic!("{}", e),
     };
@@ -92,11 +88,11 @@ fn main() {
     println!("Listening on: {}", &ip_string);
 
     // Spawn the database pruning thread
-    Thread::spawn(move|| {
-        let prune_delay = Duration::minutes(31);
+    thread::spawn(move|| {
         loop {
-            // Every 31min
-            sleep(prune_delay);
+            // Every 31min (default is 30min, this allows for some delay)
+            let prune_delay: u32 = 31 * 60 * 1000;
+            sleep_ms(prune_delay);
 
             // Prune the database
             SqliteConnection::open(database_path).unwrap().execute(
@@ -113,7 +109,7 @@ fn main() {
         let tsock = sock.try_clone().unwrap();
         let mut b: Vec<u8> = buf.to_vec();
         b.truncate(amt);
-        Thread::spawn(move|| {
+        thread::spawn(move|| {
             let conn = SqliteConnection::open(database_path).unwrap();
             handle_response(tsock, &src, b, &conn);
             let _ = conn.close();

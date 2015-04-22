@@ -27,10 +27,10 @@ use parse_packets::*;
 
 // struct used by update announce to make passing data easy (vs. 4 more parameters)
 struct ID {
-    info_hash:  [u8; 20],
+    info_hash:  Vec<u8>,
     ip:         u32,
     port:       u16,
-    peer_id:    [u8; 20],
+    peer_id:    Vec<u8>,
     remaining:  i64,
 }
 
@@ -50,8 +50,8 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
     conn.execute(
         "INSERT OR REPLACE INTO torrent (info_hash, ip, port, peer_id, remaining, last_active)
         VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))",
-        &[&id.info_hash.as_slice(), &(id.ip as i32), &(id.port as i32),
-          &id.peer_id.as_slice(), &id.remaining]
+        &[&id.info_hash, &(id.ip as i32), &(id.port as i32),
+          &id.peer_id, &id.remaining]
     ).unwrap();
 
     // Info Hash swarm IP and ports
@@ -68,7 +68,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
 
     // Each row produces a count, update it as we continue along
     let mut seeders: i32 = 0;
-    for row in stmt.query(&[&data.info_hash.as_slice()]).unwrap().map(|row| row.unwrap()) {
+    for row in stmt.query(&[&data.info_hash]).unwrap().map(|row| row.unwrap()) {
         let i: i32 = row.get(0);
         let p: i32 = row.get(1);
         swarm.push((i,p));
@@ -88,7 +88,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
 
     // Each row produces a count, update it as we continue along
     let mut leechers: i32 = 0;
-    for row in stmt.query(&[&data.info_hash.as_slice()]).unwrap().map(|row| row.unwrap()) {
+    for row in stmt.query(&[&data.info_hash]).unwrap().map(|row| row.unwrap()) {
         let i: i32 = row.get(0);
         let p: i32 = row.get(1);
         swarm.push((i,p));
@@ -126,7 +126,7 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
         },
         1 => {
             // Decode the announce info
-            let decoded = decode_client_announce(&packet_body);
+            let decoded: ClientAnnounce = decode_client_announce(&packet_body);
 
             // handle an IP of 0
             let mut ip = decoded.ip;
@@ -141,10 +141,10 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
 
             // Package up the announce info for DB consumption
             let id = ID {
-                info_hash: decoded.info_hash,
+                info_hash: decoded.info_hash.clone(),
                 ip: ip,
                 port: decoded.port,
-                peer_id: decoded.peer_id,
+                peer_id: decoded.peer_id.clone(),
                 remaining: decoded.remaining,
             };
 
