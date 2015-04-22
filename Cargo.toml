@@ -10,7 +10,7 @@ docopt          = "0.6.62"
 rand            = "0.3.7"
 rusqlite        = "0.0.17"
 rustc-serialize = "0.3.12"
-time            = "0.1.24"
+time            = "0.1.25"
 
 [[bin]]
 name = "rtracker"
