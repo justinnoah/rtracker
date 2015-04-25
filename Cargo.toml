@@ -7,9 +7,9 @@ authors = ["Justin Noah <justinnoah@gmail.com>"]
 [dependencies]
 bincode         = "0.1.2"
 docopt          = "0.6.62"
-rand            = "0.3.7"
+rand            = "0.3.8"
 rusqlite        = "0.0.17"
-rustc-serialize = "0.3.12"
+rustc-serialize = "0.3.13"
 time            = "0.1.25"
 
 [[bin]]
