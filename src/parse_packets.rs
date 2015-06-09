@@ -50,11 +50,11 @@ pub struct ClientAnnounce {
 impl Decodable for ClientAnnounce {
     fn decode<D: Decoder>(d: &mut D) -> Result<ClientAnnounce, D::Error> {
         let mut info_hash = Vec::new();
-        for i in 0..20 {
+        for _ in 0..20 {
             info_hash.push(try!(d.read_u8()));
         }
         let mut peer_id = Vec::new();
-        for i in 0..20 {
+        for _ in 0..20 {
             peer_id.push(try!(d.read_u8()));
         }
         Ok(ClientAnnounce {
