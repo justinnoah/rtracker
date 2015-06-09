@@ -33,8 +33,8 @@ mod handler;
 mod parse_packets;
 
 // Initialize the database
-fn init_db(path: &Path) -> SqliteConnection {
-    let conn = SqliteConnection::open(path).unwrap();
+fn init_db<T: AsRef<Path>>(path: T) {
+    let conn = SqliteConnection::open(&path.as_ref()).unwrap();
     conn.execute("
         CREATE TABLE IF NOT EXISTS torrent (
             info_hash   TEXT,
@@ -47,9 +47,6 @@ fn init_db(path: &Path) -> SqliteConnection {
         );",
         &[]
     ).unwrap();
-
-    // And return the connection
-    conn
 }
 
 static USAGE: &'static str = "
@@ -95,7 +92,7 @@ fn main() {
             sleep_ms(prune_delay);
 
             // Prune the database
-            SqliteConnection::open(database_path).unwrap().execute(
+            SqliteConnection::open(&database_path).unwrap().execute(
                 "DELETE FROM torrent
                 WHERE (strftime('%s','now') - last_active) > 1860;",
                 &[]
@@ -110,7 +107,7 @@ fn main() {
         let mut b: Vec<u8> = buf.to_vec();
         b.truncate(amt);
         thread::spawn(move|| {
-            let conn = SqliteConnection::open(database_path).unwrap();
+            let conn = SqliteConnection::open(&database_path).unwrap();
             handle_response(tsock, &src, b, &conn);
             let _ = conn.close();
         });

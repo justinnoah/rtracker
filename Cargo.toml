@@ -5,12 +5,12 @@ version = "0.2.0"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
 
 [dependencies]
-bincode         = "0.1.2"
-docopt          = "0.6.62"
+bincode         = "0.3.0"
+docopt          = "0.6.66"
 rand            = "0.3.8"
-rusqlite        = "0.0.17"
-rustc-serialize = "0.3.13"
-time            = "0.1.25"
+rusqlite        = "0.1.0"
+rustc-serialize = "0.3.15"
+time            = "0.1.26"
 
 [[bin]]
 name = "rtracker"
