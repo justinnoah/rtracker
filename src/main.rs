@@ -27,8 +27,10 @@ use std::thread::sleep_ms;
 use docopt::Docopt;
 use rusqlite::SqliteConnection;
 
+use config::load_config;
 use handler::handle_response;
 
+mod config;
 mod handler;
 mod parse_packets;
 
@@ -50,20 +52,17 @@ fn init_db<T: AsRef<Path>>(path: T) {
 }
 
 static USAGE: &'static str = "
-Usage: rtracker [-i <ip>] [-p <port>]
+Usage: rtracker [-c <conf>]
        rtracker (--help)
 
 Options:
     -h, --help          Show this message
-    -i, --ip=<ip>       IP (v4) address to listen on [default: 127.0.0.1]
-    -p, --port=<port>   Port number to listen on [default: 6969]
-
+    -c, --conf=<conf>   Configuration File [default: ]
 ";
 
 #[derive(RustcDecodable)]
 struct Args {
-    flag_ip:    String,
-    flag_port:  u16,
+    flag_conf:    String,
 }
 
 fn main() {
@@ -71,7 +70,9 @@ fn main() {
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.decode())
                             .unwrap_or_else(|e| e.exit());
-    let ip_string = format!("{}:{}", args.flag_ip, args.flag_port);
+
+    let (ip, port) = load_config(args.flag_conf);
+    let ip_string = format!("{}:{}", ip, port);
 
     let database_path = Path::new("file::memory:?cache=shared");
 
