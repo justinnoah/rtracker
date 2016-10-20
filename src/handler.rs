@@ -11,16 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-extern crate bincode;
-extern crate rand;
-extern crate rusqlite;
-extern crate rustc_serialize;
-extern crate time;
-
 use std::net::{IpAddr, SocketAddr, UdpSocket};
 
-use self::rand::Rng;
+use bincode::serde::{deserialize};
+use chrono::{UTC};
+use rand::{Rng, thread_rng};
 use rusqlite::SqliteConnection;
 
 use parse_packets::*;
@@ -36,10 +31,10 @@ struct ID {
 
 // Generate a UUID to make the client happy
 fn gen_uuid() -> i64 {
-    let mut rng = rand::thread_rng();
-    let mut uuid = time::precise_time_ns();
+    let mut rng = thread_rng();
+    let mut uuid: i64 = UTC::now().timestamp();
     uuid <<= 32;
-    uuid as i64 | rng.gen::<u32>() as i64
+    uuid | rng.gen::<u32>() as i64
 }
 
 // On announce, update the client's remaining and last_active info
@@ -65,10 +60,12 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
          WHERE info_hash = ? AND remaining = 0
          GROUP BY ip,port"
     ).unwrap();
+    let mut rows = stmt.query(&[&data.info_hash]).unwrap();
 
     // Each row produces a count, update it as we continue along
     let mut seeders: i32 = 0;
-    for row in stmt.query(&[&data.info_hash]).unwrap().map(|row| row.unwrap()) {
+    while let Some(result_row) = rows.next() {
+        let row = result_row.unwrap();
         let i: i32 = row.get(0);
         let p: i32 = row.get(1);
         swarm.push((i,p));
@@ -85,10 +82,12 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
          WHERE info_hash = ? AND remaining > 0
          GROUP BY ip,port"
     ).unwrap();
+    let mut rows = stmt.query(&[&data.info_hash]).unwrap();
 
     // Each row produces a count, update it as we continue along
     let mut leechers: i32 = 0;
-    for row in stmt.query(&[&data.info_hash]).unwrap().map(|row| row.unwrap()) {
+    while let Some(result_row) = rows.next() {
+        let row = result_row.unwrap();
         let i: i32 = row.get(0);
         let p: i32 = row.get(1);
         swarm.push((i,p));
@@ -133,7 +132,7 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
             if ip == 0 {
                 ip = match src.ip() {
                     IpAddr::V4(x) => {
-                        bincode::decode(&x.octets()).unwrap()
+                        deserialize(&x.octets()).unwrap()
                     },
                     _ => panic!("This is possible?")
                 };

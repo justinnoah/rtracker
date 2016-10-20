@@ -11,18 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-#![feature(collections)]
-#![feature(ip_addr)]
-
+extern crate bincode;
+extern crate chrono;
 extern crate docopt;
+extern crate rand;
 extern crate rustc_serialize;
 extern crate rusqlite;
+extern crate serde;
 
 use std::net::UdpSocket;
 use std::path::Path;
 use std::thread;
-use std::thread::sleep_ms;
+use std::time::Duration;
 
 use docopt::Docopt;
 use rusqlite::SqliteConnection;
@@ -33,6 +33,7 @@ use handler::handle_response;
 mod config;
 mod handler;
 mod parse_packets;
+
 
 // Initialize the database
 fn init_db<T: AsRef<Path>>(path: T) {
@@ -62,7 +63,7 @@ Options:
 
 #[derive(RustcDecodable)]
 struct Args {
-    flag_conf:    String,
+    flag_conf: String,
 }
 
 fn main() {
@@ -89,8 +90,8 @@ fn main() {
     thread::spawn(move|| {
         loop {
             // Every 31min (default is 30min, this allows for some delay)
-            let prune_delay: u32 = 31 * 60 * 1000;
-            sleep_ms(prune_delay);
+            let prune_delay = Duration::new(31 * 60 as u64, 0);
+            thread::sleep(prune_delay);
 
             // Prune the database
             SqliteConnection::open(&database_path).unwrap().execute(

@@ -1,17 +1,29 @@
 [package]
-
 name = "rtracker"
 version = "0.3.0"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
+build = "build.rs"
+
+[build-dependencies]
+serde_codegen = "~0.8"
 
 [dependencies]
-bincode         = "0.3.0"
-docopt          = "0.6.66"
-rand            = "0.3.8"
-rusqlite        = "0.1.0"
-rustc-serialize = "0.3.15"
-rust-ini        = "0.8.0"
-time            = "0.1.26"
+docopt          = "~0.6"
+chrono          = "~0.2"
+rand            = "~0.3"
+rustc-serialize = "~0.3"
+rust-ini        = "~0.9"
+serde           = "~0.8"
+
+[dependencies.bincode]
+version = "~0.6"
+default-features = false
+features = ["serde"]
+
+[dependencies.rusqlite]
+version = "~0.7"
+default-features = false
+features = ["chrono", "serde_json"]
 
 [[bin]]
 name = "rtracker"

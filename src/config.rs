@@ -5,8 +5,8 @@ pub fn load_config<T: AsRef<str>>(path: T) -> (String, String) {
     let ini_file = Ini::load_from_file(path.as_ref()).unwrap();
 
     let server  = ini_file.section(Some("server")).unwrap();
-    let ip = server.get("ip").unwrap();
-    let port = server.get("port").unwrap();
+    let ip: &String = server.get("ip").unwrap();
+    let port: &String = server.get("port").unwrap();
 
-    (ip.as_ref().to_string(), port.as_ref().to_string())
+    (ip.to_string(), port.to_string())
 }
