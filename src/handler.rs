@@ -105,12 +105,14 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
 }
 
 pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &SqliteConnection) {
+    debug!("Packet received!");
     // Split the packet into header and body parts
     let mut packet_header = packet;
     let packet_body = packet_header.split_off(16);
 
     // parse the header to act on it
     let header = parse_header(&packet_header);
+    debug!("Header: {:?}", header);
 
     match header.action {
         0 => {

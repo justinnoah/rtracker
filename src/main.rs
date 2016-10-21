@@ -14,6 +14,9 @@
 extern crate bincode;
 extern crate chrono;
 extern crate docopt;
+extern crate env_logger;
+#[macro_use]
+extern crate log;
 extern crate rand;
 extern crate rustc_serialize;
 extern crate rusqlite;
@@ -36,8 +39,8 @@ mod parse_packets;
 
 
 // Initialize the database
-fn init_db<T: AsRef<Path>>(path: T) {
-    let conn = SqliteConnection::open(&path.as_ref()).unwrap();
+fn init_db(path: &Path) {
+    let conn = SqliteConnection::open(&path).unwrap();
     conn.execute("
         CREATE TABLE IF NOT EXISTS torrent (
             info_hash   TEXT,
@@ -50,6 +53,7 @@ fn init_db<T: AsRef<Path>>(path: T) {
         );",
         &[]
     ).unwrap();
+    debug!("Connection to {:?} has been made", path);
 }
 
 static USAGE: &'static str = "
@@ -67,6 +71,9 @@ struct Args {
 }
 
 fn main() {
+    env_logger::init().unwrap();
+    trace!("Logging initialized!");
+
     // parse commandline args
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.decode())
@@ -84,7 +91,7 @@ fn main() {
         Err(e) => panic!("{}", e),
     };
 
-    println!("Listening on: {}", &ip_string);
+    info!("Listening on: {}", &ip_string);
 
     // Spawn the database pruning thread
     thread::spawn(move|| {
@@ -94,6 +101,7 @@ fn main() {
             thread::sleep(prune_delay);
 
             // Prune the database
+            debug!("Prune the database!");
             SqliteConnection::open(&database_path).unwrap().execute(
                 "DELETE FROM torrent
                 WHERE (strftime('%s','now') - last_active) > 1860;",
@@ -103,15 +111,23 @@ fn main() {
     });
 
     loop {
+        debug!("Init a 2048 byte array");
         let mut buf = [0u8; 2048];
+        debug!("Read");
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
+        debug!("Clone Socket");
         let tsock = sock.try_clone().unwrap();
+        debug!("buf.to_vec");
         let mut b: Vec<u8> = buf.to_vec();
+        debug!("Trucate vec at {}", amt);
         b.truncate(amt);
+        debug!("Spawn a new thread to handle the packet");
         thread::spawn(move|| {
+            debug!("Thread: sql connect");
             let conn = SqliteConnection::open(&database_path).unwrap();
             handle_response(tsock, &src, b, &conn);
             let _ = conn.close();
+            debug!("Thread: done");
         });
     }
 }

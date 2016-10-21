@@ -19,7 +19,9 @@ include!(concat!(env!("OUT_DIR"), "/packet_data_types.rs"));
 
 pub fn parse_header(packet: &[u8]) -> PacketHeader {
     // In case we send extra by mistake, make sure to only parse the first 16 bytes
-    deserialize(&packet[..16]).unwrap()
+    let ph = deserialize(&packet[..16]).unwrap();
+    debug!("Parsed header: {:?}", ph);
+    ph
 }
 
 
