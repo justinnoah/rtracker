@@ -24,7 +24,7 @@ struct ServerAnnounce {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClientAnnounce {
     pub info_hash:  [u8; 20],
-    pub peer_id:    [u8, 20],
+    pub peer_id:    [u8; 20],
     pub downloaded: i64,
     pub remaining:  i64,
     pub uploaded:   i64,
