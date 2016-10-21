@@ -16,31 +16,6 @@ use bincode::serde::{deserialize, serialize};
 
 include!(concat!(env!("OUT_DIR"), "/packet_data_types.rs"));
 
-//impl Decodable for ClientAnnounce {
-//    fn decode<D: Decoder>(d: &mut D) -> Result<ClientAnnounce, D::Error> {
-//        let mut info_hash = Vec::new();
-//        for _ in 0..20 {
-//            info_hash.push(try!(d.read_u8()));
-//        }
-//        let mut peer_id = Vec::new();
-//        for _ in 0..20 {
-//            peer_id.push(try!(d.read_u8()));
-//        }
-//        Ok(ClientAnnounce {
-//            info_hash:  info_hash,
-//            peer_id:    peer_id,
-//            downloaded: try!(d.read_i64()),
-//            remaining:  try!(d.read_i64()),
-//            uploaded:   try!(d.read_i64()),
-//            event:      try!(d.read_i32()),
-//            ip:         try!(d.read_u32()),
-//            key:        try!(d.read_u32()),
-//            num_want:   try!(d.read_i32()),
-//            port:       try!(d.read_u16()),
-//        })
-//    }
-//}
-
 
 pub fn parse_header(packet: &[u8]) -> PacketHeader {
     // In case we send extra by mistake, make sure to only parse the first 16 bytes
@@ -61,9 +36,11 @@ pub fn decode_client_announce(packet: &[u8]) -> ClientAnnounce {
 
 pub fn encode_server_announce(transaction_id: i32, mut swarm: Vec<(i32,i32)>, num_want: i32, leechers: i32, seeders: i32) -> Vec<u8> {
     let packet = ServerAnnounce {
-        action:         1,              // Announce is always 1
+        // Announce is always 1
+        action:         1,
         transaction_id: transaction_id,
-        interval:       1800,           // 30min = 1800sec
+        // 30min in secs
+        interval:       1800,
         leechers:       leechers,
         seeders:        seeders,
     };
