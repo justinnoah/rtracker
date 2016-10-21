@@ -40,6 +40,9 @@ fn gen_uuid() -> i64 {
 // On announce, update the client's remaining and last_active info
 // Get the Seeders and Leechers for the provided info_hash
 fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (Vec<(i32,i32)>,i32, i32) {
+    // [u8; 20] -> Vec<u8>
+    let mut hash: Vec<u8> = Vec::with_capacity(20);
+    hash.extend_from_slice(&data.info_hash);
 
     // Update the user info
     conn.execute(
@@ -60,7 +63,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
          WHERE info_hash = ? AND remaining = 0
          GROUP BY ip,port"
     ).unwrap();
-    let mut rows = stmt.query(&[&data.info_hash]).unwrap();
+    let mut rows = stmt.query(&[&hash]).unwrap();
 
     // Each row produces a count, update it as we continue along
     let mut seeders: i32 = 0;
@@ -82,7 +85,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
          WHERE info_hash = ? AND remaining > 0
          GROUP BY ip,port"
     ).unwrap();
-    let mut rows = stmt.query(&[&data.info_hash]).unwrap();
+    let mut rows = stmt.query(&[&hash]).unwrap();
 
     // Each row produces a count, update it as we continue along
     let mut leechers: i32 = 0;
@@ -139,11 +142,15 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
             }
 
             // Package up the announce info for DB consumption
+            let mut hash: Vec<u8> = Vec::with_capacity(20);
+            hash.extend_from_slice(&decoded.info_hash);
+            let mut peer_id: Vec<u8> = Vec::with_capacity(20);
+            peer_id.extend_from_slice(&decoded.peer_id);
             let id = ID {
-                info_hash: decoded.info_hash.clone(),
+                info_hash: hash,
                 ip: ip,
                 port: decoded.port,
-                peer_id: decoded.peer_id.clone(),
+                peer_id: peer_id,
                 remaining: decoded.remaining,
             };
 
