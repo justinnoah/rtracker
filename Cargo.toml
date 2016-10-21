@@ -1,6 +1,6 @@
 [package]
 name = "rtracker"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
 build = "build.rs"
 
