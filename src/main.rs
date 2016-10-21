@@ -115,19 +115,23 @@ fn main() {
         let mut buf = [0u8; 2048];
         debug!("Read");
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
-        debug!("Clone Socket");
-        let tsock = sock.try_clone().unwrap();
-        debug!("buf.to_vec");
-        let mut b: Vec<u8> = buf.to_vec();
-        debug!("Trucate vec at {}", amt);
-        b.truncate(amt);
-        debug!("Spawn a new thread to handle the packet");
-        thread::spawn(move|| {
-            debug!("Thread: sql connect");
-            let conn = SqliteConnection::open(&database_path).unwrap();
-            handle_response(tsock, &src, b, &conn);
-            let _ = conn.close();
-            debug!("Thread: done");
-        });
+        if amt >= 16 {
+            debug!("Clone Socket");
+            let tsock = sock.try_clone().unwrap();
+            debug!("buf.to_vec");
+            let mut b: Vec<u8> = buf.to_vec();
+            debug!("Trucate vec at {}", amt);
+            b.truncate(amt);
+            debug!("Spawn a new thread to handle the packet");
+            thread::spawn(move|| {
+                debug!("Thread: sql connect");
+                let conn = SqliteConnection::open(&database_path).unwrap();
+                handle_response(tsock, &src, b, &conn);
+                let _ = conn.close();
+                debug!("Thread: done");
+            });
+        } else {
+            debug!("Received a tiny packet: {}", amt)
+        }
     }
 }
