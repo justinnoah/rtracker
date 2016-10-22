@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use bincode::{SizeLimit};
-use bincode::serde::{deserialize, serialize};
+use bincode::serde::{deserialize, serialize, serialized_size};
 
+#[cfg(feature = "serde_derive")]
+include!("packet_data_types.in.rs");
+
+#[cfg(feature = "serde_codegen")]
 include!(concat!(env!("OUT_DIR"), "/packet_data_types.rs"));
 
 
 pub fn parse_header(packet: &[u8]) -> PacketHeader {
     // In case we send extra by mistake, make sure to only parse the first 16 bytes
-    let ph = deserialize(&packet[..16]).unwrap();
-    debug!("Parsed header: {:?}", ph);
-    ph
+    debug!("Deserializing header!");
+    deserialize(&packet).unwrap()
 }
 
 
@@ -32,7 +35,31 @@ pub fn encode_connect_response(uuid: i64, tran_id: i32) -> Vec<u8> {
 
 
 pub fn decode_client_announce(packet: &[u8]) -> ClientAnnounce {
-    deserialize(&packet).unwrap()
+    let ca = ClientAnnounce::default();
+    debug!("ClientAnnounce serialized size: {:?}", serialized_size(&ca));
+    debug!("Deserializing Client Announce!");
+    debug!("packet len : {:?}", packet.len());
+    debug!("info_hash  : {:?}", &packet[..20]);
+    debug!("peer_id    : {:?}", &packet[20..40]);
+    debug!("downloaded : {:?}", &packet[40..48]);
+    debug!("remaining  : {:?}", &packet[48..56]);
+    debug!("uploaded   : {:?}", &packet[56..64]);
+    debug!("event      : {:?}", &packet[64..68]);
+    debug!("ip         : {:?}", &packet[68..72]);
+    debug!("key        : {:?}", &packet[72..76]);
+    debug!("num_want   : {:?}", &packet[76..80]);
+    debug!("port       : {:?}", &packet[80..82]);
+    if packet.len() > 82 {
+        debug!("extensions : {:?}", &packet[82..]);
+    }
+
+    match deserialize(&packet) {
+        Ok(x) => x,
+        Err(p) => {
+            error!("{:?}", p);
+            panic!("{:?}", p)
+        },
+    }
 }
 
 

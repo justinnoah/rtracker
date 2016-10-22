@@ -104,20 +104,21 @@ fn update_announce(conn: &Connection, id: &ID, data: &ClientAnnounce) -> (Vec<(i
     (swarm, seeders, leechers)
 }
 
-pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &Connection) {
+pub fn handle_received_packet(tsock: UdpSocket, src: &SocketAddr, mut packet_header: Vec<u8>, conn: &Connection) {
     debug!("Packet received!");
     // Split the packet into header and body parts
-    let mut packet_header = packet;
     let packet_body = packet_header.split_off(16);
 
     // parse the header to act on it
     let header = parse_header(&packet_header);
     debug!("Header: {:?}", header);
-
+    debug!("Packet Body (PB):");
+    debug!("(PB) Length: {}", packet_body.len());
     match header.action {
         0 => {
+            // Magic number according to
+            // http://www.rasterbar.com/products/libtorrent/udp_tracker_protocol.html
             if header.connection_id == 0x41727101980 {
-                // Cool Story, we got a new connection.
                 // We need to generate an unique id for this client.
                 // 32bits of the current time in nanoseconds combined with 32bits of
                 // random numbers
@@ -130,10 +131,10 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
         },
         1 => {
             // Decode the announce info
-            let decoded: ClientAnnounce = decode_client_announce(&packet_body);
+            let ca_decoded: ClientAnnounce = decode_client_announce(&packet_body);
 
             // handle an IP of 0
-            let mut ip = decoded.ip;
+            let mut ip = ca_decoded.ip;
             if ip == 0 {
                 ip = match src.ip() {
                     IpAddr::V4(x) => {
@@ -145,23 +146,23 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
 
             // Package up the announce info for DB consumption
             let mut hash: Vec<u8> = Vec::with_capacity(20);
-            hash.extend_from_slice(&decoded.info_hash);
+            hash.extend_from_slice(&ca_decoded.info_hash);
             let mut peer_id: Vec<u8> = Vec::with_capacity(20);
-            peer_id.extend_from_slice(&decoded.peer_id);
+            peer_id.extend_from_slice(&ca_decoded.peer_id);
             let id = ID {
                 info_hash: hash,
                 ip: ip,
-                port: decoded.port,
+                port: ca_decoded.port,
                 peer_id: peer_id,
-                remaining: decoded.remaining,
+                remaining: ca_decoded.remaining,
             };
 
             // Get the swarm, seeder, and leecher info
-            let (swarm, seeders, leechers) = update_announce(&conn, &id, &decoded);
+            let (swarm, seeders, leechers) = update_announce(&conn, &id, &ca_decoded);
 
             // Send it back to the client
             let serv_announce = encode_server_announce(
-                header.transaction_id, swarm, decoded.num_want, leechers, seeders
+                header.transaction_id, swarm, ca_decoded.num_want, leechers, seeders
             );
             tsock.send_to(&serv_announce, src).unwrap();
         },

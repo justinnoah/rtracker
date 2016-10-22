@@ -11,6 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![cfg_attr(feature = "serde_derive", feature(proc_macro))]
+
 extern crate bincode;
 extern crate chrono;
 extern crate docopt;
@@ -22,6 +24,9 @@ extern crate rand;
 extern crate rustc_serialize;
 extern crate rusqlite;
 extern crate serde;
+#[cfg(feature = "serde_derive")]
+#[macro_use]
+extern crate serde_derive;
 
 use std::net::UdpSocket;
 use std::thread;
@@ -30,7 +35,7 @@ use std::time::Duration;
 use docopt::Docopt;
 
 use config::{ServerConfig};
-use handler::handle_response;
+use handler::handle_received_packet;
 use database::{db_connect, db_init, db_prune};
 
 mod config;
@@ -104,7 +109,7 @@ fn main() {
             let handler_path = scfg.db.clone();
             thread::spawn(move|| {
                 let conn = db_connect(&handler_path);
-                handle_response(tsock, &src, b, &conn);
+                handle_received_packet(tsock, &src, b, &conn);
                 let _ = conn.close();
             });
         } else {
