@@ -1,6 +1,6 @@
 [package]
 name = "rtracker"
-version = "0.4.2"
+version = "0.4.999"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
 build = "build.rs"
 
@@ -8,8 +8,10 @@ build = "build.rs"
 serde_codegen = "~0.8"
 
 [dependencies]
-docopt          = "~0.6"
 chrono          = "~0.2"
+docopt          = "~0.6"
+env_logger      = "~0.3"
+log             = "~0.3"
 rand            = "~0.3"
 rustc-serialize = "~0.3"
 rust-ini        = "~0.9"

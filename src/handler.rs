@@ -16,7 +16,7 @@ use std::net::{IpAddr, SocketAddr, UdpSocket};
 use bincode::serde::{deserialize};
 use chrono::{UTC};
 use rand::{Rng, thread_rng};
-use rusqlite::SqliteConnection;
+use rusqlite::Connection;
 
 use parse_packets::*;
 
@@ -39,7 +39,7 @@ fn gen_uuid() -> i64 {
 
 // On announce, update the client's remaining and last_active info
 // Get the Seeders and Leechers for the provided info_hash
-fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (Vec<(i32,i32)>,i32, i32) {
+fn update_announce(conn: &Connection, id: &ID, data: &ClientAnnounce) -> (Vec<(i32,i32)>,i32, i32) {
     // [u8; 20] -> Vec<u8>
     let mut hash: Vec<u8> = Vec::with_capacity(20);
     hash.extend_from_slice(&data.info_hash);
@@ -104,7 +104,7 @@ fn update_announce(conn: &SqliteConnection, id: &ID, data: &ClientAnnounce) -> (
     (swarm, seeders, leechers)
 }
 
-pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &SqliteConnection) {
+pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn: &Connection) {
     debug!("Packet received!");
     // Split the packet into header and body parts
     let mut packet_header = packet;
@@ -157,7 +157,7 @@ pub fn handle_response(tsock: UdpSocket, src: &SocketAddr, packet: Vec<u8>, conn
             };
 
             // Get the swarm, seeder, and leecher info
-            let (swarm, seeders, leechers) = update_announce(conn, &id, &decoded);
+            let (swarm, seeders, leechers) = update_announce(&conn, &id, &decoded);
 
             // Send it back to the client
             let serv_announce = encode_server_announce(
