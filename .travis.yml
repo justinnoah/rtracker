@@ -8,3 +8,6 @@ matrix:
     - rust:
         - beta
         - nightly
+branches:
+    except:
+        - appveyor_support
