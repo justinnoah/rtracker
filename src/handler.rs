@@ -13,11 +13,12 @@
 // limitations under the License.
 use std::net::{IpAddr, SocketAddr, UdpSocket};
 
-use bincode::serde::{deserialize};
-use chrono::{UTC};
+use bincode::deserialize;
+use chrono::UTC;
 use rand::{Rng, thread_rng};
 use rusqlite::Connection;
 
+use packet_data_types::*;
 use parse_packets::*;
 
 // struct used by update announce to make passing data easy (vs. 4 more parameters)

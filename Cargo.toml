@@ -2,36 +2,28 @@
 name = "rtracker"
 version = "0.4.999"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
-build = "build.rs"
-
-[build-dependencies]
-serde_codegen = { version = "~0.8", optional = true }
 
 [dependencies]
-chrono          = "~0.2"
-docopt          = "~0.6"
-env_logger      = "~0.3"
-log             = "~0.3"
-rand            = "~0.3"
-rustc-serialize = "~0.3"
-rust-ini        = "~0.9"
-serde           = "~0.8"
-serde_derive    = { version = "~0.8", optional = true }
-
-[dependencies.bincode]
-version = "~0.6"
-default-features = false
-features = ["serde"]
+bincode         = "0.7"
+chrono          = "0.3"
+docopt          = "0.7"
+env_logger      = "0.4"
+log             = "0.3"
+rand            = "0.3"
+rustc-serialize = "0.3"
+rust-ini        = "0.10"
+serde           = "0.9"
+serde_derive    = "0.9"
 
 [dependencies.rusqlite]
-version = "~0.7"
+version = "0.11"
 default-features = false
 features = ["chrono", "serde_json"]
-
-[features]
-default = ["serde_codegen"]
-unstable = ["serde_derive"]
 
 [[bin]]
 name = "rtracker"
 path = "src/main.rs"
+
+[badges]
+travis-ci = { repository = "justinnoah/rtracker" }
+appveyor = { repository = "justinnoah/rtracker" }

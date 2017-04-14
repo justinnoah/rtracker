@@ -1,6 +1,3 @@
-use serde::Serializer;
-
-
 #[derive(Deserialize, Debug)]
 pub struct PacketHeader {
     pub connection_id:  i64,
@@ -26,9 +23,7 @@ pub struct ServerAnnounce {
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct ClientAnnounce {
-    #[serde(serialize_with = "twenty_u8_as_tuple")]
     pub info_hash:  [u8; 20], // 20
-    #[serde(serialize_with = "twenty_u8_as_tuple")]
     pub peer_id:    [u8; 20], // 40
     pub downloaded: i64,      // 48
     pub remaining:  i64,      // 56
@@ -38,14 +33,4 @@ pub struct ClientAnnounce {
     pub key:        u32,      // 76
     pub num_want:   i32,      // 80
     pub port:       u16,      // 82
-}
-
-fn twenty_u8_as_tuple<S>(this: &[u8; 20], serializer: &mut S) -> Result<(), S::Error>
-    where S: Serializer
-{
-    let mut state = try!(serializer.serialize_tuple(20));
-    for &byte in this {
-        try!(serializer.serialize_tuple_elt(&mut state, byte));
-    }
-    serializer.serialize_tuple_end(state)
 }

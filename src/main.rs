@@ -11,8 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#![cfg_attr(feature = "serde_derive", feature(proc_macro))]
-
 extern crate bincode;
 extern crate chrono;
 extern crate docopt;
@@ -24,7 +22,6 @@ extern crate rand;
 extern crate rustc_serialize;
 extern crate rusqlite;
 extern crate serde;
-#[cfg(feature = "serde_derive")]
 #[macro_use]
 extern crate serde_derive;
 
@@ -41,6 +38,7 @@ use database::{db_connect, db_init, db_prune};
 mod config;
 mod handler;
 mod database;
+mod packet_data_types;
 mod parse_packets;
 
 
@@ -94,6 +92,7 @@ fn main() {
     });
 
     loop {
+        // This will become flexible. Simply a starting point
         debug!("Init a 2048 byte array");
         let mut buf = [0u8; 2048];
         debug!("Read");
