@@ -65,7 +65,7 @@ fn main() {
                             .and_then(|d| d.decode())
                             .unwrap_or_else(|e| e.exit());
 
-    let scfg = ServerConfig::new(args.flag_conf);
+    let scfg = ServerConfig::new(&args.flag_conf);
 
     // Let's first initialize the database.
     let sock = match UdpSocket::bind(&scfg.address) {
