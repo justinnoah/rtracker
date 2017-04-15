@@ -14,43 +14,33 @@
 extern crate bincode;
 extern crate chrono;
 extern crate docopt;
+extern crate env_logger;
+extern crate ini;
+#[macro_use]
+extern crate log;
 extern crate rand;
 extern crate rustc_serialize;
 extern crate rusqlite;
 extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 
 use std::net::UdpSocket;
-use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
 use docopt::Docopt;
-use rusqlite::SqliteConnection;
 
-use config::load_config;
-use handler::handle_response;
+use config::{ServerConfig};
+use handler::handle_received_packet;
+use database::{db_connect, db_init, db_prune};
 
 mod config;
 mod handler;
+mod database;
+mod packet_data_types;
 mod parse_packets;
 
-
-// Initialize the database
-fn init_db<T: AsRef<Path>>(path: T) {
-    let conn = SqliteConnection::open(&path.as_ref()).unwrap();
-    conn.execute("
-        CREATE TABLE IF NOT EXISTS torrent (
-            info_hash   TEXT,
-            ip          INTEGER,
-            port        INTEGER,
-            peer_id     TEXT,
-            remaining   INTEGER,
-            last_active INTEGER,
-            PRIMARY KEY (info_hash, ip, port, peer_id)
-        );",
-        &[]
-    ).unwrap();
-}
 
 static USAGE: &'static str = "
 Usage: rtracker [-c <conf>]
@@ -67,51 +57,62 @@ struct Args {
 }
 
 fn main() {
+    env_logger::init().unwrap();
+    trace!("Logging initialized!");
+
     // parse commandline args
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.decode())
                             .unwrap_or_else(|e| e.exit());
 
-    let (ip, port) = load_config(args.flag_conf);
-    let ip_string = format!("{}:{}", ip, port);
-
-    let database_path = Path::new("file::memory:?cache=shared");
+    let scfg = ServerConfig::new(&args.flag_conf);
 
     // Let's first initialize the database.
-    let _ = init_db(database_path);
-    let sock = match UdpSocket::bind(&ip_string[..]) {
+    let sock = match UdpSocket::bind(&scfg.address) {
         Ok(s) => s,
         Err(e) => panic!("{}", e),
     };
-
-    println!("Listening on: {}", &ip_string);
+    info!("Listening on: {}", &scfg.address);
+    db_init(&db_connect(&scfg.db));
+    debug!("DB initialized");
 
     // Spawn the database pruning thread
+    let prune_conn_path = scfg.db.clone();
     thread::spawn(move|| {
         loop {
             // Every 31min (default is 30min, this allows for some delay)
             let prune_delay = Duration::new(31 * 60 as u64, 0);
             thread::sleep(prune_delay);
-
+            let prune_conn = db_connect(&prune_conn_path);
+            db_prune(&prune_conn);
+            let _ = prune_conn.close();
             // Prune the database
-            SqliteConnection::open(&database_path).unwrap().execute(
-                "DELETE FROM torrent
-                WHERE (strftime('%s','now') - last_active) > 1860;",
-                &[]
-            ).unwrap();
+            debug!("Prune the database!");
         }
     });
 
     loop {
+        // This will become flexible. Simply a starting point
+        debug!("Init a 2048 byte array");
         let mut buf = [0u8; 2048];
+        debug!("Read");
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
-        let tsock = sock.try_clone().unwrap();
-        let mut b: Vec<u8> = buf.to_vec();
-        b.truncate(amt);
-        thread::spawn(move|| {
-            let conn = SqliteConnection::open(&database_path).unwrap();
-            handle_response(tsock, &src, b, &conn);
-            let _ = conn.close();
-        });
+        if amt >= 16 {
+            debug!("Clone Socket");
+            let tsock = sock.try_clone().unwrap();
+            debug!("buf.to_vec");
+            let mut b: Vec<u8> = buf.to_vec();
+            debug!("Trucate vec at {}", amt);
+            b.truncate(amt);
+            debug!("Spawn a new thread to handle the packet");
+            let handler_path = scfg.db.clone();
+            thread::spawn(move|| {
+                let conn = db_connect(&handler_path);
+                handle_received_packet(tsock, &src, b, &conn);
+                let _ = conn.close();
+            });
+        } else {
+            debug!("Received a tiny packet (size: {})", amt)
+        }
     }
 }
