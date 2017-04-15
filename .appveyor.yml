@@ -37,25 +37,6 @@ environment:
   # Stable 64-bit GNU
     - channel: stable
       target: x86_64-pc-windows-gnu
-  # Stable 32-bit MSVC
-    - channel: stable
-      target: i686-pc-windows-msvc
-  # Stable 32-bit GNU
-    - channel: stable
-      target: i686-pc-windows-gnu
-### Beta Toolchains ###
-  # Beta 64-bit MSVC
-    - channel: beta
-      target: x86_64-pc-windows-msvc
-  # Beta 64-bit GNU
-    - channel: beta
-      target: x86_64-pc-windows-gnu
-  # Beta 32-bit MSVC
-    - channel: beta
-      target: i686-pc-windows-msvc
-  # Beta 32-bit GNU
-    - channel: beta
-      target: i686-pc-windows-gnu
 ### Nightly Toolchains ###
   # Nightly 64-bit MSVC
     - channel: nightly
@@ -63,12 +44,6 @@ environment:
   # Nightly 64-bit GNU
     - channel: nightly
       target: x86_64-pc-windows-gnu
-  # Nightly 32-bit MSVC
-    - channel: nightly
-      target: i686-pc-windows-msvc
-  # Nightly 32-bit GNU
-    - channel: nightly
-      target: i686-pc-windows-gnu
 
 # For now, we only care about release builds
 configuration:
@@ -77,7 +52,6 @@ configuration:
 # We will never care about x86, may add ARM in the future
 platform:
   - x64
-  - x86
 
 ### Allowed failures ###
 
@@ -86,11 +60,7 @@ platform:
 # or test failure in the matching channels/targets from failing the entire build.
 matrix:
   allow_failures:
-    - target: i686-pc-windows-msvc
-    - target: i686-pc-windows-gnu
     - channel: nightly
-    - channel: beta
-    - platform: x86
 
 ## Install Script ##
 
@@ -109,7 +79,6 @@ matrix:
 #
 # The file appveyor_rust_install.ps1 must exist in the root directory of the repository.
 install:
-- ps: .\.appveyor\platform_check.ps1
 - ps: .\.appveyor\install_dependencies.ps1
 - ps: .\.appveyor\install_rust.ps1
 
