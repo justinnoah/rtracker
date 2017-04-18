@@ -1,0 +1,5 @@
+[server]
+# address = [::1]:6969
+address = 127.0.0.1:6969
+# db_address must be a file for now
+db_address = ./tmp.sql

@@ -34,3 +34,10 @@ pub struct ClientAnnounce {
     pub num_want:   i32,      // 80
     pub port:       u16,      // 82
 }
+
+#[derive(Debug, Serialize)]
+pub struct ServerError {
+    pub action:         i32,
+    pub transaction_id: i32,
+    pub error:          String,
+}
