@@ -96,9 +96,10 @@ fn main() {
 
     loop {
         // This will become flexible. Simply a starting point
-        debug!("Init a 2048 byte array");
-        let mut buf = [0u8; 2048];
-        debug!("Read");
+        debug!("Init udp packet buffer");
+        // UDP packet max
+        let mut buf = [0u8; 1500];
+        debug!("IOWait");
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
         if amt >= 16 {
             debug!("Clone Socket");
