@@ -13,30 +13,57 @@ pub struct ServerConfig {
 impl ServerConfig {
     /// Try hard to not fail when reading a config by providing default values
     pub fn new(path: &String) -> ServerConfig {
-        let mut n = ServerConfig {
-            address: SocketAddr::from_str("127.0.0.1:6969").unwrap(),
-            db: String::new(),
-        };
+        let mut cfg_path = Path::new("");
+
+        // Given no config option passed
+        if path == "" {
+            // Look in default locations for rtracker.ini
+            let local = Path::new("./rtracker.ini");
+            let home = Path::new("~/.config/rtracker.ini");
+            let system = Path::new("/etc/rtracker.ini");
+            if local.exists() {
+                cfg_path = local;
+            } else if home.exists() {
+                cfg_path = home;
+            } else if system.exists() {
+                cfg_path = system;
+            }
+        } else {
+            cfg_path = Path::new(path);
+        }
+
+        if !cfg_path.exists() {
+            cfg_path = Path::new("");
+        }
+
+        debug!("Loading config: {:?}", cfg_path);
 
         // Load the ini and grab the server section
-        if Path::new(path.as_str()).exists() {
-            let ini_file: Ini = Ini::load_from_file(path.as_str()).unwrap();
+        if cfg_path != Path::new("") {
+            let ini_file: Ini = Ini::load_from_file(cfg_path).unwrap();
             let server_section  = ini_file.section(Some("server")).unwrap();
 
             // Check for a server address
+            let mut addr = String::new();
             if server_section.contains_key("address") {
-                n.address = SocketAddr::from_str(server_section.get("address").unwrap()).unwrap();
+                addr = server_section.get("address").unwrap().to_string();
+            }
+            // Check for a database URI
+            let mut db = String::new();
+            if server_section.contains_key("db_address") {
+                db = server_section.get("db_address").unwrap().to_string();
             }
 
-            // Check for a database URI
-            if server_section.contains_key("db_address") {
-                n.db = server_section.get("db_address").unwrap().to_string();
+            // Return the object
+            ServerConfig {
+                address: SocketAddr::from_str(addr.as_str()).unwrap(),
+                db:      db,
+            }
+        } else {
+            ServerConfig {
+                address: SocketAddr::from_str("127.0.0.1:6969").unwrap(),
+                db: String::new(),
             }
         }
-        debug!("addr: {:?}", n.address);
-        debug!("db: {:?}", n.db);
-
-        // Return constructed configuration
-        n
     }
 }

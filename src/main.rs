@@ -56,6 +56,7 @@ struct Args {
     flag_conf: String,
 }
 
+
 fn main() {
     env_logger::init().unwrap();
     trace!("Logging initialized!");
@@ -66,6 +67,8 @@ fn main() {
                             .unwrap_or_else(|e| e.exit());
 
     let scfg = ServerConfig::new(&args.flag_conf);
+    debug!("addr: {:?}", scfg.address);
+    debug!("db: {:?}", scfg.db);
 
     // Let's first initialize the database.
     let sock = match UdpSocket::bind(&scfg.address) {
