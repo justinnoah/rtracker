@@ -5,6 +5,7 @@ authors = ["Justin Noah <justinnoah@gmail.com>"]
 
 [dependencies]
 bincode         = "0.7"
+byteorder       = "1.0"
 chrono          = "0.3"
 docopt          = "0.7"
 env_logger      = "0.4"

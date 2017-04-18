@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use rusqlite::{Connection, SQLITE_OPEN_READ_WRITE, SQLITE_OPEN_CREATE,
                SQLITE_OPEN_FULL_MUTEX, SQLITE_OPEN_URI};
 
@@ -8,15 +6,8 @@ pub fn db_connect(path: &String) -> Connection {
     let flags = { SQLITE_OPEN_READ_WRITE | SQLITE_OPEN_CREATE |
                   SQLITE_OPEN_FULL_MUTEX | SQLITE_OPEN_URI };
 
-    let conn = if Path::new(path).exists() {
-            debug!("Connection to {:?} has been established", path);
-            Connection::open_with_flags(path, flags)
-    } else {
-            debug!("Connection to in memory db has been established");
-            Connection::open_in_memory_with_flags(flags)
-    };
-
-    conn.unwrap()
+    debug!("Connection to {:?} has been established", path);
+    Connection::open_with_flags(path, flags).unwrap()
 }
 
 // Initialize the database
@@ -24,7 +15,7 @@ pub fn db_init(conn: &Connection) {
     conn.execute("
         CREATE TABLE IF NOT EXISTS torrent (
             info_hash   TEXT,
-            ip          INTEGER,
+            ip          TEXT,
             port        INTEGER,
             peer_id     TEXT,
             remaining   INTEGER,

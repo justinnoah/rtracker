@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 extern crate bincode;
+extern crate byteorder;
 extern crate chrono;
 extern crate docopt;
 extern crate env_logger;
@@ -101,22 +102,17 @@ fn main() {
         let mut buf = [0u8; 1500];
         debug!("IOWait");
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
+        let tsock = sock.try_clone().unwrap();
         if amt >= 16 {
-            debug!("Clone Socket");
-            let tsock = sock.try_clone().unwrap();
-            debug!("buf.to_vec");
-            let mut b: Vec<u8> = buf.to_vec();
-            debug!("Trucate vec at {}", amt);
-            b.truncate(amt);
             debug!("Spawn a new thread to handle the packet");
-            let handler_path = scfg.db.clone();
+            let db_path = scfg.db.clone();
             thread::spawn(move|| {
-                let conn = db_connect(&handler_path);
-                handle_received_packet(tsock, &src, b, &conn);
-                let _ = conn.close();
+                let mut packet: Vec<u8> = buf.to_vec();
+                packet.resize(amt, 0);
+                handle_received_packet(packet, src, tsock, &db_path);
             });
         } else {
-            debug!("Received a tiny packet (size: {})", amt)
+            debug!("Received a tiny packet (size: {}), ignoring", amt)
         }
     }
 }
