@@ -12,16 +12,20 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-use rusqlite::{Connection, SQLITE_OPEN_READ_WRITE, SQLITE_OPEN_CREATE,
-               SQLITE_OPEN_FULL_MUTEX, SQLITE_OPEN_URI};
+use std::env::temp_dir;
+
+use rusqlite::{Connection, SQLITE_OPEN_READ_WRITE, SQLITE_OPEN_CREATE, SQLITE_OPEN_MEMORY,
+               SQLITE_OPEN_FULL_MUTEX, SQLITE_OPEN_URI, SQLITE_OPEN_SHARED_CACHE};
 
 /// Using a slightly modified set of rusqlite open flags, open and return a connection
 pub fn db_connect(path: &String) -> Connection {
-    let flags = { SQLITE_OPEN_READ_WRITE | SQLITE_OPEN_CREATE |
-                  SQLITE_OPEN_FULL_MUTEX | SQLITE_OPEN_URI };
+    let flags = { SQLITE_OPEN_READ_WRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY |
+                  SQLITE_OPEN_FULL_MUTEX | SQLITE_OPEN_URI |
+                  SQLITE_OPEN_SHARED_CACHE };
 
-    debug!("Connection to {:?} has been established", path);
-    Connection::open_with_flags(path, flags).unwrap()
+    let mut db_handle = temp_dir();
+    db_handle.push("tblb");
+    Connection::open_with_flags(db_handle, flags).unwrap()
 }
 
 // Initialize the database
