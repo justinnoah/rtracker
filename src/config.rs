@@ -1,3 +1,17 @@
+//   Copyright 2017 Justin Noah <justinnoah@gmail.com>
+//
+//   Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+
 use std::net::SocketAddr;
 use std::path::Path;
 use std::str::FromStr;
@@ -7,7 +21,7 @@ use ini::Ini;
 #[derive(Debug)]
 pub struct ServerConfig {
     pub address: SocketAddr,
-    pub db: String,
+    pub pool_size: usize,
 }
 
 impl ServerConfig {
@@ -42,27 +56,30 @@ impl ServerConfig {
         if cfg_path != Path::new("") {
             let ini_file: Ini = Ini::load_from_file(cfg_path).unwrap();
             let server_section  = ini_file.section(Some("server")).unwrap();
+            let db_section = ini_file.section(Some("db")).unwrap();
 
             // Check for a server address
             let mut addr = String::new();
             if server_section.contains_key("address") {
                 addr = server_section.get("address").unwrap().to_string();
             }
-            // Check for a database URI
-            let mut db = String::new();
-            if server_section.contains_key("db_address") {
-                db = server_section.get("db_address").unwrap().to_string();
+
+            // Check for db thread pool size option
+            let mut pool_size: usize = 10;
+            if db_section.contains_key("thread_pool_size") {
+                let str_pool_size = db_section.get("thread_pool_size").unwrap();
+                pool_size = str_pool_size.parse::<usize>().unwrap();
             }
 
             // Return the object
             ServerConfig {
                 address: SocketAddr::from_str(addr.as_str()).unwrap(),
-                db:      db,
+                pool_size: pool_size,
             }
         } else {
             ServerConfig {
                 address: SocketAddr::from_str("127.0.0.1:6969").unwrap(),
-                db: String::new(),
+                pool_size: 10,
             }
         }
     }

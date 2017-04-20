@@ -1,30 +1,31 @@
-// Copyright 2015 Justin Noah, All Rights Reserved.
+//   Copyright 2017 Justin Noah <justinnoah@gmail.com>
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//   Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+//       http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+
 extern crate bincode;
 extern crate byteorder;
 extern crate chrono;
 extern crate docopt;
 extern crate env_logger;
 extern crate ini;
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate log;
+extern crate r2d2;
+extern crate r2d2_sqlite;
 extern crate rand;
 extern crate rustc_serialize;
 extern crate rusqlite;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
 
 use std::net::UdpSocket;
 use std::thread;
@@ -34,7 +35,7 @@ use docopt::Docopt;
 
 use config::{ServerConfig};
 use handler::handle_received_packet;
-use database::{db_connect, db_init, db_prune};
+use database::{db_connection_pool, db_init, db_prune};
 
 mod config;
 mod handler;
@@ -69,7 +70,6 @@ fn main() {
 
     let scfg = ServerConfig::new(&args.flag_conf);
     debug!("addr: {:?}", scfg.address);
-    debug!("db: {:?}", scfg.db);
 
     // Let's first initialize the database.
     let sock = match UdpSocket::bind(&scfg.address) {
@@ -77,19 +77,19 @@ fn main() {
         Err(e) => panic!("{}", e),
     };
     info!("Listening on: {}", &scfg.address);
-    db_init(&db_connect(&scfg.db));
+    let pool = db_connection_pool(scfg.pool_size);
+    db_init(pool.clone().get().unwrap());
     debug!("DB initialized");
 
     // Spawn the database pruning thread
-    let prune_conn_path = scfg.db.clone();
+    let prune_pool = pool.clone();
     thread::spawn(move|| {
         loop {
             // Every 31min (default is 30min, this allows for some delay)
             let prune_delay = Duration::new(31 * 60 as u64, 0);
             thread::sleep(prune_delay);
-            let prune_conn = db_connect(&prune_conn_path);
-            db_prune(&prune_conn);
-            let _ = prune_conn.close();
+            let prune_conn = prune_pool.get().unwrap();
+            db_prune(prune_conn);
             // Prune the database
             debug!("Prune the database!");
         }
@@ -103,13 +103,13 @@ fn main() {
         debug!("IOWait");
         let (amt, src) = sock.recv_from(&mut buf).unwrap();
         let tsock = sock.try_clone().unwrap();
+        let tpool = pool.clone();
         if amt >= 16 {
             debug!("Spawn a new thread to handle the packet");
-            let db_path = scfg.db.clone();
             thread::spawn(move|| {
                 let mut packet: Vec<u8> = buf.to_vec();
                 packet.resize(amt, 0);
-                handle_received_packet(packet, src, tsock, &db_path);
+                handle_received_packet(packet, src, tsock, tpool.get().unwrap());
             });
         } else {
             debug!("Received a tiny packet (size: {}), ignoring", amt)

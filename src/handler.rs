@@ -1,23 +1,24 @@
-// Copyright 2015 Justin Noah, All Rights Reserved.
+//   Copyright 2017 Justin Noah <justinnoah@gmail.com>
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//   Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+//       http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 
 use bincode::{Bounded, serialize};
 use chrono::UTC;
 use rand::{Rng, thread_rng};
 
-use database::db_connect;
+use database::PoolCon;
 use packet_data_types::*;
 use parse_packets::*;
 
@@ -43,14 +44,12 @@ fn gen_uuid() -> i64 {
 
 // On announce, update the client's remaining and last_active info
 // Get the Seeders and Leechers for the provided info_hash
-fn update_announce(path: String, id: &ID, data: &ClientAnnounce) -> TrackerData {
+fn update_announce(conn: PoolCon, id: &ID, data: &ClientAnnounce) -> TrackerData {
     // [u8; 20] -> Vec<u8>
     let mut hash: Vec<u8> = Vec::new();
     hash.extend_from_slice(&data.info_hash);
     debug!("ClientAnnounce");
     debug!("hash: {:?}", hash);
-
-    let conn = db_connect(&path);
 
     // Update the user info
     match conn.execute(
@@ -115,7 +114,7 @@ fn update_announce(path: String, id: &ID, data: &ClientAnnounce) -> TrackerData 
     (swarm, seeders, leechers)
 }
 
-pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket, db_path: &String) {
+pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket, conn: PoolCon) {
     debug!("Begin parsing received packet!");
     let (packet_header, packet_body) = packet.split_at(16);
     debug!("Packet Size: {:?}", packet.len());
@@ -184,7 +183,7 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
             };
 
             // Get the swarm, seeder, and leecher info
-            let (swarm, seeders, leechers) = update_announce(db_path.clone(), &id, &ca_decoded);
+            let (swarm, seeders, leechers) = update_announce(conn, &id, &ca_decoded);
 
             // Send it back to the client
             let serv_announce = encode_server_announce(
