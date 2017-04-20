@@ -19,11 +19,13 @@ use rusqlite::{SQLITE_OPEN_READ_WRITE, SQLITE_OPEN_CREATE, SQLITE_OPEN_MEMORY,
 
 pub type PoolCon = r2d2::PooledConnection<SqliteConnectionManager>;
 
-pub fn db_connection_pool() -> r2d2::Pool<SqliteConnectionManager> {
+pub fn db_connection_pool(pool_size: usize) -> r2d2::Pool<SqliteConnectionManager> {
     let flags = { SQLITE_OPEN_READ_WRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY |
                   SQLITE_OPEN_FULL_MUTEX | SQLITE_OPEN_URI |
                   SQLITE_OPEN_SHARED_CACHE };
-    let config = r2d2::Config::default();
+    debug!("{:?} threads available", pool_size);
+    let config = r2d2::Config::builder()
+        .pool_size(pool_size as u32).build();
     let manager = SqliteConnectionManager::new_with_flags(
         "file:blah?mode=memory&cache=shared", flags);
     r2d2::Pool::new(config, manager).unwrap()

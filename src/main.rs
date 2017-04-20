@@ -77,7 +77,7 @@ fn main() {
         Err(e) => panic!("{}", e),
     };
     info!("Listening on: {}", &scfg.address);
-    let pool = db_connection_pool();
+    let pool = db_connection_pool(scfg.pool_size);
     db_init(pool.clone().get().unwrap());
     debug!("DB initialized");
 
