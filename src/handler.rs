@@ -18,7 +18,7 @@ use bincode::{Bounded, serialize};
 use chrono::UTC;
 use rand::{Rng, thread_rng};
 
-use database::db_connect;
+use database::PoolCon;
 use packet_data_types::*;
 use parse_packets::*;
 
@@ -44,14 +44,12 @@ fn gen_uuid() -> i64 {
 
 // On announce, update the client's remaining and last_active info
 // Get the Seeders and Leechers for the provided info_hash
-fn update_announce(path: String, id: &ID, data: &ClientAnnounce) -> TrackerData {
+fn update_announce(conn: PoolCon, id: &ID, data: &ClientAnnounce) -> TrackerData {
     // [u8; 20] -> Vec<u8>
     let mut hash: Vec<u8> = Vec::new();
     hash.extend_from_slice(&data.info_hash);
     debug!("ClientAnnounce");
     debug!("hash: {:?}", hash);
-
-    let conn = db_connect(&path);
 
     // Update the user info
     match conn.execute(
@@ -116,7 +114,7 @@ fn update_announce(path: String, id: &ID, data: &ClientAnnounce) -> TrackerData 
     (swarm, seeders, leechers)
 }
 
-pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket, db_path: &String) {
+pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket, conn: PoolCon) {
     debug!("Begin parsing received packet!");
     let (packet_header, packet_body) = packet.split_at(16);
     debug!("Packet Size: {:?}", packet.len());
@@ -185,7 +183,7 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
             };
 
             // Get the swarm, seeder, and leecher info
-            let (swarm, seeders, leechers) = update_announce(db_path.clone(), &id, &ca_decoded);
+            let (swarm, seeders, leechers) = update_announce(conn, &id, &ca_decoded);
 
             // Send it back to the client
             let serv_announce = encode_server_announce(

@@ -21,7 +21,6 @@ use ini::Ini;
 #[derive(Debug)]
 pub struct ServerConfig {
     pub address: SocketAddr,
-    pub db: String,
 }
 
 impl ServerConfig {
@@ -62,21 +61,13 @@ impl ServerConfig {
             if server_section.contains_key("address") {
                 addr = server_section.get("address").unwrap().to_string();
             }
-            // Check for a database URI
-            let mut db = String::new();
-            if server_section.contains_key("db_address") {
-                db = server_section.get("db_address").unwrap().to_string();
-            }
-
             // Return the object
             ServerConfig {
                 address: SocketAddr::from_str(addr.as_str()).unwrap(),
-                db:      db,
             }
         } else {
             ServerConfig {
                 address: SocketAddr::from_str("127.0.0.1:6969").unwrap(),
-                db: String::new(),
             }
         }
     }
