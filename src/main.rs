@@ -14,7 +14,6 @@
 //   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern crate bincode;
-extern crate byteorder;
 extern crate chrono;
 extern crate docopt;
 extern crate env_logger;

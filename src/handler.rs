@@ -15,7 +15,7 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 
-use bincode::{Bounded, serialize};
+use bincode::serialize;
 use chrono::UTC;
 use rand::{Rng, thread_rng};
 
@@ -34,6 +34,7 @@ struct ID {
 }
 
 pub type TrackerData = (Vec<(String,i32)>, i32, i32);
+
 
 // Generate a UUID to make the client happy
 fn gen_uuid() -> i64 {
@@ -165,7 +166,7 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
                 };
             } else {
                 // This is guaranteed to be a u32 and thus have a Vec<u8>.len() of 4
-                let x :Vec<u8> = serialize(&ca_decoded.ip, Bounded(4)).unwrap();
+                let x :Vec<u8> = serialize(&ca_decoded.ip).unwrap();
                 ip = Ipv4Addr::new(x[0], x[1], x[2], x[3]).to_string();
             }
 
@@ -173,8 +174,10 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
             // Package up the announce info for DB consumption
             let mut hash: Vec<u8> = Vec::with_capacity(20);
             hash.extend_from_slice(&ca_decoded.info_hash);
+
             let mut peer_id: Vec<u8> = Vec::with_capacity(20);
             peer_id.extend_from_slice(&ca_decoded.peer_id);
+
             let id = ID {
                 info_hash: hash,
                 ip: ip,
