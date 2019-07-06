@@ -16,7 +16,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 
 use bincode::serialize;
-use chrono::UTC;
+use chrono::prelude::Utc;
 use rand::{Rng, thread_rng};
 
 use database::PoolCon;
@@ -39,7 +39,7 @@ pub type TrackerData = (Vec<(String,i32)>, i32, i32);
 // Generate a UUID to make the client happy
 fn gen_uuid() -> i64 {
     let mut rng = thread_rng();
-    let mut uuid: i64 = UTC::now().timestamp();
+    let mut uuid: i64 = Utc::now().timestamp();
     uuid <<= 32;
     uuid | rng.gen::<u32>() as i64
 }
