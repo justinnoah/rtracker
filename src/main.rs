@@ -59,7 +59,7 @@ struct Args {
 
 
 fn main() {
-    env_logger::init().unwrap();
+    env_logger::init();
     trace!("Logging initialized!");
 
     // parse commandline args
