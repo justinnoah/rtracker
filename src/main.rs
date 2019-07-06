@@ -22,7 +22,6 @@ extern crate ini;
 extern crate r2d2;
 extern crate r2d2_sqlite;
 extern crate rand;
-extern crate rustc_serialize;
 extern crate rusqlite;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
@@ -53,7 +52,7 @@ Options:
     -c, --conf=<conf>   Configuration File [default: ]
 ";
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 struct Args {
     flag_conf: String,
 }
@@ -65,7 +64,7 @@ fn main() {
 
     // parse commandline args
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
+                            .and_then(|d| d.deserialize())
                             .unwrap_or_else(|e| e.exit());
 
     let scfg = ServerConfig::new(&args.flag_conf);
