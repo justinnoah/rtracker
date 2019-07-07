@@ -1,6 +1,6 @@
 [package]
 name = "rtracker"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
 license = "APGL-3.0-only"
 keywords = ["bittorrent", "torrent", "tracker"]
