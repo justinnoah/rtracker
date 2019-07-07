@@ -14,7 +14,6 @@
 //   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern crate bincode;
-extern crate byteorder;
 extern crate chrono;
 extern crate docopt;
 extern crate env_logger;
@@ -23,7 +22,6 @@ extern crate ini;
 extern crate r2d2;
 extern crate r2d2_sqlite;
 extern crate rand;
-extern crate rustc_serialize;
 extern crate rusqlite;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
@@ -54,19 +52,19 @@ Options:
     -c, --conf=<conf>   Configuration File [default: ]
 ";
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 struct Args {
     flag_conf: String,
 }
 
 
 fn main() {
-    env_logger::init().unwrap();
+    env_logger::init();
     trace!("Logging initialized!");
 
     // parse commandline args
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
+                            .and_then(|d| d.deserialize())
                             .unwrap_or_else(|e| e.exit());
 
     let scfg = ServerConfig::new(&args.flag_conf);
