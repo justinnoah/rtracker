@@ -2,7 +2,7 @@
 name = "rtracker"
 version = "0.7.0"
 authors = ["Justin Noah <justinnoah@gmail.com>"]
-license = "Apache-2.0"
+license = "APGL-3.0-only"
 keywords = ["bittorrent", "torrent", "tracker"]
 categories = ["command-line-utilities"]
 
