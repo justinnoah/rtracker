@@ -18,13 +18,15 @@ extern crate chrono;
 extern crate docopt;
 extern crate env_logger;
 extern crate ini;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate r2d2;
 extern crate r2d2_sqlite;
 extern crate rand;
 extern crate rusqlite;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
 use std::net::UdpSocket;
 use std::thread;
@@ -32,16 +34,15 @@ use std::time::Duration;
 
 use docopt::Docopt;
 
-use config::{ServerConfig};
-use handler::handle_received_packet;
+use config::ServerConfig;
 use database::{db_connection_pool, db_init, db_prune};
+use handler::handle_received_packet;
 
 mod config;
-mod handler;
 mod database;
+mod handler;
 mod packet_data_types;
 mod parse_packets;
-
 
 static USAGE: &'static str = "
 Usage: rtracker [-c <conf>]
@@ -57,15 +58,14 @@ struct Args {
     flag_conf: String,
 }
 
-
 fn main() {
     env_logger::init();
     trace!("Logging initialized!");
 
     // parse commandline args
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.deserialize())
-                            .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
 
     let scfg = ServerConfig::new(&args.flag_conf);
     debug!("addr: {:?}", scfg.address);
@@ -82,7 +82,7 @@ fn main() {
 
     // Spawn the database pruning thread
     let prune_pool = pool.clone();
-    thread::spawn(move|| {
+    thread::spawn(move || {
         loop {
             // Every 31min (default is 30min, this allows for some delay)
             let prune_delay = Duration::new(31 * 60 as u64, 0);
@@ -105,7 +105,7 @@ fn main() {
         let tpool = pool.clone();
         if amt >= 16 {
             debug!("Spawn a new thread to handle the packet");
-            thread::spawn(move|| {
+            thread::spawn(move || {
                 let mut packet: Vec<u8> = buf.to_vec();
                 packet.resize(amt, 0);
                 handle_received_packet(packet, src, tsock, tpool.get().unwrap());

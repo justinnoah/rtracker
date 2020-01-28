@@ -20,24 +20,30 @@ use rusqlite::*;
 pub type PoolCon = r2d2::PooledConnection<SqliteConnectionManager>;
 
 pub fn db_connection_pool(pool_size: usize) -> r2d2::Pool<SqliteConnectionManager> {
-    let flags = { OpenFlags::SQLITE_OPEN_READ_WRITE |
-                  OpenFlags::SQLITE_OPEN_CREATE |
-                  OpenFlags::SQLITE_OPEN_MEMORY |
-                  OpenFlags::SQLITE_OPEN_FULL_MUTEX |
-                  OpenFlags::SQLITE_OPEN_URI |
-                  OpenFlags::SQLITE_OPEN_SHARED_CACHE };
+    let flags = {
+        OpenFlags::SQLITE_OPEN_READ_WRITE
+            | OpenFlags::SQLITE_OPEN_CREATE
+            | OpenFlags::SQLITE_OPEN_MEMORY
+            | OpenFlags::SQLITE_OPEN_FULL_MUTEX
+            | OpenFlags::SQLITE_OPEN_URI
+            | OpenFlags::SQLITE_OPEN_SHARED_CACHE
+    };
 
     debug!("{:?} threads available", pool_size);
-    
-    let manager = SqliteConnectionManager::file("file:blah?mode=memory&cache=shared")
-        .with_flags(flags);
 
-    r2d2::Pool::builder().max_size(pool_size as u32).build(manager).unwrap()
+    let manager =
+        SqliteConnectionManager::file("file:blah?mode=memory&cache=shared").with_flags(flags);
+
+    r2d2::Pool::builder()
+        .max_size(pool_size as u32)
+        .build(manager)
+        .unwrap()
 }
 
 // Initialize the database
 pub fn db_init(conn: PoolCon) {
-    conn.execute("
+    conn.execute(
+        "
         CREATE TABLE IF NOT EXISTS torrent (
             info_hash   TEXT,
             ip          TEXT,
@@ -47,14 +53,16 @@ pub fn db_init(conn: PoolCon) {
             last_active INTEGER,
             PRIMARY KEY (info_hash, ip, port, peer_id)
         );",
-        params![]
-    ).unwrap();
+        params![],
+    )
+    .unwrap();
 }
 
 pub fn db_prune(conn: PoolCon) {
     conn.execute(
         "DELETE FROM torrent
         WHERE (strftime('%s','now') - last_active) > 1860;",
-        params![]
-    ).unwrap();
+        params![],
+    )
+    .unwrap();
 }

@@ -56,7 +56,7 @@ impl ServerConfig {
         // Load the ini and grab the server section
         if cfg_path != Path::new("") {
             let ini_file: Ini = Ini::load_from_file(cfg_path).unwrap();
-            let server_section  = ini_file.section(Some("server")).unwrap();
+            let server_section = ini_file.section(Some("server")).unwrap();
             let db_section = ini_file.section(Some("db")).unwrap();
 
             // Check for a server address

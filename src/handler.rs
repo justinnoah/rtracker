@@ -17,13 +17,12 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 
 use bincode::serialize;
 use chrono::prelude::Utc;
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use rusqlite::*;
 
 use database::PoolCon;
 use packet_data_types::*;
 use parse_packets::*;
-
 
 // struct used by update announce to make passing data easy (vs. 4 more parameters)
 struct ID {
@@ -34,8 +33,7 @@ struct ID {
     remaining:  i64,
 }
 
-pub type TrackerData = (Vec<(String,i32)>, i32, i32);
-
+pub type TrackerData = (Vec<(String, i32)>, i32, i32);
 
 // Generate a UUID to make the client happy
 fn gen_uuid() -> i64 {
@@ -58,10 +56,16 @@ fn update_announce(conn: PoolCon, id: &ID, data: &ClientAnnounce) -> Result<Trac
     match conn.execute(
         "INSERT OR REPLACE INTO torrent (info_hash, ip, port, peer_id, remaining, last_active)
         VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))",
-        params![id.info_hash, id.ip, (id.port as i32), id.peer_id, id.remaining]
+        params![
+            id.info_hash,
+            id.ip,
+            (id.port as i32),
+            id.peer_id,
+            id.remaining
+        ],
     ) {
         Ok(_) => (),
-        Err(x) => panic!("{:?}", x)
+        Err(x) => panic!("{:?}", x),
     }
 
     // Info Hash swarm IP and ports
@@ -73,7 +77,7 @@ fn update_announce(conn: PoolCon, id: &ID, data: &ClientAnnounce) -> Result<Trac
         "SELECT ip,port,COUNT(*)
          FROM torrent
          WHERE info_hash = ? AND remaining = 0
-         GROUP BY ip,port"
+         GROUP BY ip,port",
     )?;
     let mut rows = stmt.query(&[&hash])?;
 
@@ -96,7 +100,7 @@ fn update_announce(conn: PoolCon, id: &ID, data: &ClientAnnounce) -> Result<Trac
         "SELECT ip,port,COUNT(*)
          FROM torrent
          WHERE info_hash = ? AND remaining > 0
-         GROUP BY ip,port"
+         GROUP BY ip,port",
     )?;
     let mut rows = stmt.query(&[&hash])?;
 
@@ -124,7 +128,7 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
     debug!("Packet Size: {:?}", packet.len());
 
     // parse the header to act on it
-    let header :PacketHeader = parse_header(&packet_header);
+    let header: PacketHeader = parse_header(&packet_header);
     debug!("Header: {:?}", header);
     debug!("Action: {}", header.action as i32);
     debug!("Packet Body (PB):");
@@ -135,21 +139,20 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
             // Magic number according to
             // http://www.rasterbar.com/products/libtorrent/udp_tracker_protocol.html
             // if header.connection_id == 0x41727101980 {
-                // We need to generate an unique id for this client.
-                // 32bits of the current time in nanoseconds combined with 32bits of
-                // random numbers
-                let uuid = gen_uuid();
+            // We need to generate an unique id for this client.
+            // 32bits of the current time in nanoseconds combined with 32bits of
+            // random numbers
+            let uuid = gen_uuid();
 
-                // debugs
-                debug!("UUID: {}", uuid);
+            // debugs
+            debug!("UUID: {}", uuid);
 
-                // Now they're in the db, let's say hi
-                let encoded = encode_server_connect(uuid, header.transaction_id);
-                sock.send_to(&encoded, src).unwrap();
+            // Now they're in the db, let's say hi
+            let encoded = encode_server_connect(uuid, header.transaction_id);
+            sock.send_to(&encoded, src).unwrap();
             //} else {
             //}
-
-        },
+        }
         1 => {
             // Decode the announce info
             let ca_decoded: ClientAnnounce = decode_client_announce(&packet_body);
@@ -159,19 +162,14 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
             let mut ip = String::new();
             if ip_field == 0 {
                 ip = match src.ip() {
-                    IpAddr::V4(x) => {
-                        x.to_string()
-                    },
-                    IpAddr::V6(y) => {
-                        y.to_string()
-                    }
+                    IpAddr::V4(x) => x.to_string(),
+                    IpAddr::V6(y) => y.to_string(),
                 };
             } else {
                 // This is guaranteed to be a u32 and thus have a Vec<u8>.len() of 4
-                let x :Vec<u8> = serialize(&ca_decoded.ip).unwrap();
+                let x: Vec<u8> = serialize(&ca_decoded.ip).unwrap();
                 ip = Ipv4Addr::new(x[0], x[1], x[2], x[3]).to_string();
             }
-
 
             // Package up the announce info for DB consumption
             let mut hash: Vec<u8> = Vec::with_capacity(20);
@@ -193,10 +191,14 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
 
             // Send it back to the client
             let serv_announce = encode_server_announce(
-                header.transaction_id, swarm, ca_decoded.num_want, leechers, seeders
+                header.transaction_id,
+                swarm,
+                ca_decoded.num_want,
+                leechers,
+                seeders,
             );
             sock.send_to(&serv_announce, src).unwrap();
-        },
+        }
         _ => {
             let err_packet = encode_error(header.transaction_id, "Unsupported Action");
             sock.send_to(&err_packet, src).unwrap();
