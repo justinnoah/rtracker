@@ -61,7 +61,7 @@ pub fn db_init(conn: PoolCon) {
 pub fn db_prune(conn: PoolCon) {
     conn.execute(
         "DELETE FROM torrent
-        WHERE (strftime('%s','now') - last_active) > 1860;",
+        WHERE (strftime('%s','now') - last_active) > 300;",
         params![],
     )
     .unwrap();
