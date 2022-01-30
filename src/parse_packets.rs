@@ -20,39 +20,29 @@
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use bincode::{config as bin, serialized_size};
+use bincode::{Options, options, serialized_size};
 
 use packet_data_types::*;
 
 pub fn parse_header(packet: &[u8]) -> PacketHeader {
-    // In case we send extra by mistake, make sure to only parse the first 16 bytes
     debug!("Deserializing header of len {:?}", packet.len());
 
-    let b: i64 = bin()
-        .big_endian()
-        .deserialize(&Vec::from(&packet[0..8]))
-        .unwrap();
     debug!("ID Bytes: {:?}", &packet[0..8]);
-    debug!("ID: {0:x}", b);
+    debug!("ID: {0:x}", {
+        bincode::deserialize::<i64>(&packet[0..8]).unwrap().to_be()
+    });
 
-    let c: i32 = bin()
-        .big_endian()
-        .deserialize(&Vec::from(&packet[8..12]))
-        .unwrap();
     debug!("Action Bytes: {:?}", &packet[8..12]);
-    debug!("Action: {:?}", c);
+    debug!("Action: {:?}", {
+        bincode::deserialize::<i32>(&packet[8..12]).unwrap().to_be()
+    });
 
-    let d: i32 = bin()
-        .big_endian()
-        .deserialize(&Vec::from(&packet[12..]))
-        .unwrap();
-    debug!("TID Bytes: {:?}", &packet[12..]);
-    debug!("TID: {:?}", d);
+    debug!("TID Bytes: {:?}", &packet[12..16]);
+    debug!("TID: {:?}", {
+        bincode::deserialize::<i32>(&packet[12..16]).unwrap().to_be()
+    });
 
-    bin()
-        .big_endian()
-        .deserialize::<PacketHeader>(&packet)
-        .unwrap()
+    options().deserialize::<PacketHeader>(&packet[0..16]).unwrap()
 }
 
 pub fn encode_server_connect(uuid: i64, tran_id: i32) -> Vec<u8> {
