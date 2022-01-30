@@ -53,7 +53,7 @@ pub fn encode_server_connect(uuid: i64, tran_id: i32) -> Vec<u8> {
     };
 
     // Network Order, Bounded(16)
-    let v: Vec<u8> = bin().big_endian().limit(16).serialize(&packet).unwrap();
+    let v: Vec<u8> = options().with_big_endian().with_limit(16).serialize(&packet).unwrap();
 
     debug!("v: {:?}", v);
     v
@@ -79,7 +79,7 @@ pub fn decode_client_announce(packet: &[u8]) -> ClientAnnounce {
         debug!("extensions : {:?}", &packet[82..]);
     }
 
-    match bin().big_endian().deserialize(&packet) {
+    match options().with_big_endian().deserialize(packet) {
         Ok(x) => x,
         Err(p) => panic!("{:?}", p),
     }
@@ -102,7 +102,7 @@ pub fn encode_server_announce(
         seeders,
     };
 
-    let mut packet = bin().big_endian().serialize(&packet).unwrap();
+    let mut packet = options().with_big_endian().serialize(&packet).unwrap();
 
     // Truncate the vector if num_want is smaller than the vector length
     if (num_want >= 0) && (num_want < swarm.len() as i32) {
@@ -131,7 +131,7 @@ pub fn encode_server_announce(
         };
 
         packet.append(&mut ip_bytes);
-        packet.append(&mut bin().big_endian().limit(2).serialize(&(p as u16)).unwrap());
+        packet.append(&mut options().with_big_endian().with_limit(2).serialize(&(p as u16)).unwrap());
     }
 
     packet
@@ -147,5 +147,5 @@ pub fn encode_error(transaction_id: i32, error_string: &str) -> Vec<u8> {
     debug!("{:?}", err);
 
     // Return the packet
-    bin().big_endian().serialize(error_string).unwrap()
+    options().with_big_endian().serialize(error_string).unwrap()
 }
