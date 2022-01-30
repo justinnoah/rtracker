@@ -44,7 +44,7 @@ mod handler;
 mod packet_data_types;
 mod parse_packets;
 
-static USAGE: &'static str = "
+static USAGE: &str = "
 Usage: rtracker [-c <conf>]
        rtracker (--help)
 
@@ -77,7 +77,7 @@ fn main() {
     };
     info!("Listening on: {}", &scfg.address);
     let pool = db_connection_pool(scfg.pool_size);
-    db_init(pool.clone().get().unwrap());
+    db_init(pool.get().unwrap());
     debug!("DB initialized");
 
     // Spawn the database pruning thread
@@ -85,7 +85,7 @@ fn main() {
     thread::spawn(move || {
         loop {
             // Every 31min (default is 30min, this allows for some delay)
-            let prune_delay = Duration::new(31 * 60 as u64, 0);
+            let prune_delay = Duration::new(31 * 60u64, 0);
             thread::sleep(prune_delay);
             let prune_conn = prune_pool.get().unwrap();
             db_prune(prune_conn);

@@ -31,7 +31,7 @@ impl ServerConfig {
         let mut cfg_path = Path::new("");
 
         // Given no config option passed
-        if path == "" {
+        if path.is_empty() {
             // Look in default locations for rtracker.ini
             let local = Path::new("./rtracker.ini");
             let home = Path::new("~/.config/rtracker.ini");
@@ -75,7 +75,7 @@ impl ServerConfig {
             // Return the object
             ServerConfig {
                 address: SocketAddr::from_str(addr.as_str()).unwrap(),
-                pool_size: pool_size,
+                pool_size,
             }
         } else {
             ServerConfig {

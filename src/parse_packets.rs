@@ -103,13 +103,13 @@ pub fn encode_server_announce(
     seeders: i32,
 ) -> Vec<u8> {
     let packet = ServerAnnounce {
-        // Announce is always 1
-        action:         1,
-        transaction_id: transaction_id,
+        // Action for Announce is always 1
+        action: 1,
+        transaction_id,
         // 30min in secs
-        interval:       1800,
-        leechers:       leechers,
-        seeders:        seeders,
+        interval: 1800,
+        leechers,
+        seeders,
     };
 
     let mut packet = bin().big_endian().serialize(&packet).unwrap();
@@ -132,12 +132,11 @@ pub fn encode_server_announce(
             }
             IpAddr::V6(ip6) => {
                 let double_bytes = ip6.segments();
-                let it = bin()
-                    .big_endian()
-                    .limit(16)
+                options()
+                    .with_big_endian()
+                    .with_limit(16)
                     .serialize(&double_bytes)
-                    .unwrap();
-                it
+                    .unwrap()
             }
         };
 
@@ -152,7 +151,7 @@ pub fn encode_error(transaction_id: i32, error_string: &str) -> Vec<u8> {
     let err = ServerError {
         // Action (3 == Error)
         action: 3,
-        transaction_id: transaction_id,
+        transaction_id,
         error: String::from_str(error_string).unwrap(),
     };
     debug!("{:?}", err);

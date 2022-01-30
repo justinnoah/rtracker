@@ -128,7 +128,7 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
     debug!("Packet Size: {:?}", packet.len());
 
     // parse the header to act on it
-    let header: PacketHeader = parse_header(&packet_header);
+    let header: PacketHeader = parse_header(packet_header);
     debug!("Header: {:?}", header);
     debug!("Action: {}", header.action as i32);
     debug!("Packet Body (PB):");
@@ -155,21 +155,20 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
         }
         1 => {
             // Decode the announce info
-            let ca_decoded: ClientAnnounce = decode_client_announce(&packet_body);
+            let ca_decoded: ClientAnnounce = decode_client_announce(packet_body);
 
             // handle an IP of 0
             let ip_field = ca_decoded.ip;
-            let mut ip = String::new();
-            if ip_field == 0 {
-                ip = match src.ip() {
+            let ip: String = if ip_field == 0 {
+                match src.ip() {
                     IpAddr::V4(x) => x.to_string(),
                     IpAddr::V6(y) => y.to_string(),
-                };
+                }
             } else {
                 // This is guaranteed to be a u32 and thus have a Vec<u8>.len() of 4
                 let x: Vec<u8> = serialize(&ca_decoded.ip).unwrap();
-                ip = Ipv4Addr::new(x[0], x[1], x[2], x[3]).to_string();
-            }
+                Ipv4Addr::new(x[0], x[1], x[2], x[3]).to_string()
+            };
 
             // Package up the announce info for DB consumption
             let mut hash: Vec<u8> = Vec::with_capacity(20);
@@ -180,9 +179,9 @@ pub fn handle_received_packet(packet: Vec<u8>, src: SocketAddr, sock: UdpSocket,
 
             let id = ID {
                 info_hash: hash,
-                ip: ip,
+                ip,
                 port: ca_decoded.port,
-                peer_id: peer_id,
+                peer_id,
                 remaining: ca_decoded.remaining,
             };
 
