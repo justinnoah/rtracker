@@ -84,13 +84,16 @@ fn main() {
     let prune_pool = pool.clone();
     thread::spawn(move || {
         loop {
-            // Every 31min (default is 30min, this allows for some delay)
-            let prune_delay = Duration::new(31 * 60u64, 0);
+            // Every minute run the prune function.
+            // As of this comment, db_prune selects all torrents / connections with a (now -
+            // last_active) > 30 minutes. Thus, our 30 minute prune has a polling resolution of one
+            // minute.
+            let prune_delay = Duration::new(60u64, 0);
             thread::sleep(prune_delay);
+            debug!("Prune the database!");
+            // Prune the database
             let prune_conn = prune_pool.get().unwrap();
             db_prune(prune_conn);
-            // Prune the database
-            debug!("Prune the database!");
         }
     });
 
