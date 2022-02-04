@@ -70,11 +70,12 @@ fn main() {
     let scfg = ServerConfig::new(&args.flag_conf);
     debug!("addr: {:?}", scfg.address);
 
-    // Let's first initialize the database.
+    // Initialize the database.
     let sock = match UdpSocket::bind(&scfg.address) {
         Ok(s) => s,
         Err(e) => panic!("{}", e),
     };
+
     info!("Listening on: {}", &scfg.address);
     let pool = db_connection_pool(scfg.pool_size);
     db_init(pool.get().unwrap());
@@ -86,7 +87,7 @@ fn main() {
         loop {
             // Every minute run the prune function.
             // As of this comment, db_prune selects all torrents / connections with a (now -
-            // last_active) > 30 minutes. Thus, our 30 minute prune has a polling resolution of one
+            // last_active) > 30 minutes. Thus, the 30 minute prune has a polling resolution of one
             // minute.
             let prune_delay = Duration::new(60u64, 0);
             thread::sleep(prune_delay);
@@ -107,12 +108,9 @@ fn main() {
         let tsock = sock.try_clone().unwrap();
         let tpool = pool.clone();
         if amt >= 16 {
-            debug!("Spawn a new thread to handle the packet");
-            thread::spawn(move || {
-                let mut packet: Vec<u8> = buf.to_vec();
-                packet.resize(amt, 0);
-                handle_received_packet(packet, src, tsock, tpool.get().unwrap());
-            });
+            let mut packet: Vec<u8> = buf.to_vec();
+            packet.resize(amt, 0);
+            handle_received_packet(packet, src, tsock, tpool.get().unwrap());
         } else {
             debug!("Received a tiny packet (size: {}), ignoring", amt)
         }
