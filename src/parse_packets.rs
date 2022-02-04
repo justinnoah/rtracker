@@ -20,39 +20,29 @@
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use bincode::{config as bin, serialized_size};
+use bincode::{Options, options, serialized_size};
 
 use packet_data_types::*;
 
 pub fn parse_header(packet: &[u8]) -> PacketHeader {
-    // In case we send extra by mistake, make sure to only parse the first 16 bytes
     debug!("Deserializing header of len {:?}", packet.len());
 
-    let b: i64 = bin()
-        .big_endian()
-        .deserialize(&Vec::from(&packet[0..8]))
-        .unwrap();
     debug!("ID Bytes: {:?}", &packet[0..8]);
-    debug!("ID: {0:x}", b);
+    debug!("ID: {0:x}", {
+        bincode::deserialize::<i64>(&packet[0..8]).unwrap().to_be()
+    });
 
-    let c: i32 = bin()
-        .big_endian()
-        .deserialize(&Vec::from(&packet[8..12]))
-        .unwrap();
     debug!("Action Bytes: {:?}", &packet[8..12]);
-    debug!("Action: {:?}", c);
+    debug!("Action: {:?}", {
+        bincode::deserialize::<i32>(&packet[8..12]).unwrap().to_be()
+    });
 
-    let d: i32 = bin()
-        .big_endian()
-        .deserialize(&Vec::from(&packet[12..]))
-        .unwrap();
-    debug!("TID Bytes: {:?}", &packet[12..]);
-    debug!("TID: {:?}", d);
+    debug!("TID Bytes: {:?}", &packet[12..16]);
+    debug!("TID: {:?}", {
+        bincode::deserialize::<i32>(&packet[12..16]).unwrap().to_be()
+    });
 
-    bin()
-        .big_endian()
-        .deserialize::<PacketHeader>(&packet)
-        .unwrap()
+    options().deserialize::<PacketHeader>(&packet[0..16]).unwrap()
 }
 
 pub fn encode_server_connect(uuid: i64, tran_id: i32) -> Vec<u8> {
@@ -63,7 +53,7 @@ pub fn encode_server_connect(uuid: i64, tran_id: i32) -> Vec<u8> {
     };
 
     // Network Order, Bounded(16)
-    let v: Vec<u8> = bin().big_endian().limit(16).serialize(&packet).unwrap();
+    let v: Vec<u8> = options().with_big_endian().with_limit(16).serialize(&packet).unwrap();
 
     debug!("v: {:?}", v);
     v
@@ -89,7 +79,7 @@ pub fn decode_client_announce(packet: &[u8]) -> ClientAnnounce {
         debug!("extensions : {:?}", &packet[82..]);
     }
 
-    match bin().big_endian().deserialize(&packet) {
+    match options().with_big_endian().deserialize(packet) {
         Ok(x) => x,
         Err(p) => panic!("{:?}", p),
     }
@@ -103,16 +93,16 @@ pub fn encode_server_announce(
     seeders: i32,
 ) -> Vec<u8> {
     let packet = ServerAnnounce {
-        // Announce is always 1
-        action:         1,
-        transaction_id: transaction_id,
+        // Action for Announce is always 1
+        action: 1,
+        transaction_id,
         // 30min in secs
-        interval:       1800,
-        leechers:       leechers,
-        seeders:        seeders,
+        interval: 1800,
+        leechers,
+        seeders,
     };
 
-    let mut packet = bin().big_endian().serialize(&packet).unwrap();
+    let mut packet = options().with_big_endian().serialize(&packet).unwrap();
 
     // Truncate the vector if num_want is smaller than the vector length
     if (num_want >= 0) && (num_want < swarm.len() as i32) {
@@ -132,17 +122,16 @@ pub fn encode_server_announce(
             }
             IpAddr::V6(ip6) => {
                 let double_bytes = ip6.segments();
-                let it = bin()
-                    .big_endian()
-                    .limit(16)
+                options()
+                    .with_big_endian()
+                    .with_limit(16)
                     .serialize(&double_bytes)
-                    .unwrap();
-                it
+                    .unwrap()
             }
         };
 
         packet.append(&mut ip_bytes);
-        packet.append(&mut bin().big_endian().limit(2).serialize(&(p as u16)).unwrap());
+        packet.append(&mut options().with_big_endian().with_limit(2).serialize(&(p as u16)).unwrap());
     }
 
     packet
@@ -152,11 +141,11 @@ pub fn encode_error(transaction_id: i32, error_string: &str) -> Vec<u8> {
     let err = ServerError {
         // Action (3 == Error)
         action: 3,
-        transaction_id: transaction_id,
+        transaction_id,
         error: String::from_str(error_string).unwrap(),
     };
     debug!("{:?}", err);
 
     // Return the packet
-    bin().big_endian().serialize(error_string).unwrap()
+    options().with_big_endian().serialize(error_string).unwrap()
 }
