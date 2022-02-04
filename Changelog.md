@@ -1,3 +1,9 @@
-## Latest
+## 0.8.1
 
-- Reaping time reduced from 31min to 5min
+- Prune scan time lowered from 31 minutes to 1 minute.
+- No longer is a new thread spawned for every packet received.
+- Upgraded dependenices.
+
+## 0.8.0
+ 
+ ...
